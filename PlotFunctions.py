@@ -68,3 +68,4 @@ def plot_variance(record_variance, record_each, n_iter, t_T, t_R, dt):
 	ax.set_title('Positional variance')
 	ax.set_xlabel('Time (ms)', fontsize=14)
 	ax.set_ylabel('Positional variance', fontsize=14)
+
