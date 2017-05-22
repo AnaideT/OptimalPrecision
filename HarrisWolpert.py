@@ -208,9 +208,8 @@ def control_learning(control_init=None, m=10., beta=1., k=0.000005,
 			if t == 0:
 				return x0
 			else:
-				somme =  A_pow_array[t].dot(x0)
-				somme += sum(np.transpose(ci_array[:, 0:t]*np.flipud(u[0:t])))
-				return somme
+				return (ci_array[:,0:t]*np.flipud(u[0:t])).sum(axis = 1)
+
 
 		def vexpectation(u):
 			"""
@@ -221,12 +220,13 @@ def control_learning(control_init=None, m=10., beta=1., k=0.000005,
 				exp[i, :] = expectation(u,i)
 			return exp
 
+
 		def variance(u, t):
 			"""
 			compute the variance at time t given the control signal u
 			"""
-			somme = (m**2)*k*sum(np.flipud(ci0_array[0:t]*ci0_array[0:t])*u[0:t]*u[0:t])
-			return somme
+			return (m**2)*k*(np.flipud(ci0_array[0:t]**2)*u[0:t]**2).sum()
+
 
 		def vvariance(u):
 			"""
@@ -237,30 +237,39 @@ def control_learning(control_init=None, m=10., beta=1., k=0.000005,
 				var[i] = variance(u,i)
 			return var
 
+
 		def bias(u, t):
 			"""
 			compute the bias at time t given the control signal u
 			"""
-			mean = expectation(u, t)
-			result = (mean-xT)**2
-			return result
+			return ((expectation(u, t)-xT)**2).sum()
+
 
 		def cost(u):
 			"""
 			compute the post-movement cost given the control signal u
 			"""
-			return sum(variance(u, t) + sum(bias(u, t)) for t in (T+1+np.arange(R))) + sum(bias(u, T))
+			def var1d(t):
+				return(variance(u,t))
+			var_vec = np.vectorize(var1d)
+			def bias1d(t):
+				return(bias(u,t))
+			bias_vec = np.vectorize(bias1d)
+
+			return var_vec(T+1+np.arange(R)).sum() + bias_vec(T+np.arange(R+1)).sum()
+
 
 		def cost_deriv(u, i):
 			"""
 			Derivative of the cost function with respect to u_i
 			"""
 			if i < T:
-				return sum(sum(2*np.transpose(ci_array[:, (T-i-1):(T+R-i)])*([expectation(u, t).tolist() for t in (T+np.arange(R+1))]-xT))) + 2*(m**2)*k*u[i]*sum(ci0_array[(T+1-i-1):(T+R-i)]**2)
+				return (2*np.transpose(ci_array[:,(T-i-1):(T+R-i)])*np.array(([expectation(u,t).tolist() for t in (T+np.arange(R+1))])-xT)).sum() + 2*(m**2)*k*u[i]*(ci0_array[(T+1-i-1):(T+R-i)]**2).sum()
 			elif i == T:
-				return sum(sum(2*np.transpose(ci_array[:, 0:R])*([expectation(u, t).tolist() for t in (T+1+np.arange(R))]-xT))) + 2*(m**2)*k*u[T]*sum(ci0_array[0:R]**2)
+				return (2*np.transpose(ci_array[:,0:R])*([expectation(u,t).tolist() for t in (T+1+np.arange(R))]-xT)).sum() + 2*(m**2)*k*u[T]*(ci0_array[0:R]**2).sum()
 			else:
-				return sum(sum(2*np.transpose(ci_array[:, 0:(T+R-i)])*([expectation(u, t).tolist() for t in (i+1+np.arange(R+T-i))]-xT))) + 2*(m**2)*k*u[i]*sum(ci0_array[0:(T+R-i)]**2)
+				return (2*np.transpose(ci_array[:,0:(T+R-i)])*([expectation(u,t).tolist() for t in (i+1+np.arange(R+T-i))]-xT)).sum() + 2*(m**2)*k*u[i]*(ci0_array[0:(T+R-i)]**2).sum()
+
 
 		def vcost_deriv(u):
 			"""
