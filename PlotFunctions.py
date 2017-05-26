@@ -47,7 +47,7 @@ def plot_velocity(record_velocity, record_each, n_iter, t_T, t_R, dt):
 	time_ms = time*1000
 
 	for i in np.arange(N_show):
-		ax.plot(time_ms, 1000*record_velocity[i*record_each], '-')
+		ax.plot(time_ms, record_velocity[i*record_each], '-')
 	ax.set_title('Velocity')
 	ax.set_xlabel('Time (ms)', fontsize=14)
 	ax.set_ylabel(r'Velocity $(deg.s^{-1})$ ', fontsize=14)
