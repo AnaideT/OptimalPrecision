@@ -1,4 +1,7 @@
 import numpy as np
 
-def ControlInitFunction(n):
-	return np.concatenate((40/n*np.ones(int(0.86*n)+1),-2*40/n*np.ones(n-1-int(0.86*n)),np.zeros(n+1)))
+def ControlInitFunction(n, gain=17., rho=0.86):
+    seg_1 = np.ones(int(rho*n)+1)
+    seg_2 = np.ones(int(n-1-rho*n))
+    seg_3 = np.zeros(int(n+1))
+    return np.concatenate((gain/n*seg_1, -2*gain/n*seg_2, seg_3))
