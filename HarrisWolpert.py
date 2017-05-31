@@ -265,8 +265,6 @@ def control_learning(control_init=None, m=10., beta=1., k=0.000005,
 			"""
 			if i < T:
 				return (2*np.transpose(ci_array[:,(T-i-1):(T+R-i)])*np.array(([expectation(u,t).tolist() for t in (T+np.arange(R+1))])-xT)).sum() + 2*(m**2)*k*u[i]*(ci0_array[(T+1-i-1):(T+R-i)]**2).sum()
-			elif i == T:
-				return (2*np.transpose(ci_array[:,0:R])*([expectation(u,t).tolist() for t in (T+1+np.arange(R))]-xT)).sum() + 2*(m**2)*k*u[T]*(ci0_array[0:R]**2).sum()
 			else:
 				return (2*np.transpose(ci_array[:,0:(T+R-i)])*([expectation(u,t).tolist() for t in (i+1+np.arange(R+T-i))]-xT)).sum() + 2*(m**2)*k*u[i]*(ci0_array[0:(T+R-i)]**2).sum()
 
