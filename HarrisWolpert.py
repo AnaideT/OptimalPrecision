@@ -208,7 +208,7 @@ def control_learning(control_init=None, m=10., beta=1., k=0.000005,
 			if t == 0:
 				return x0
 			else:
-				return (ci_array[:,0:t]*np.flipud(u[0:t])).sum(axis = 1)
+				return ((ci[:,0:t]*np.flipud(u[0:t])).sum(axis = 1))*np.array([1,1/dt])
 
 
 		def vexpectation(u):
