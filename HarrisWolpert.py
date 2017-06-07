@@ -9,7 +9,7 @@ class MinimumVarianceControl:
 	to minimize the variance of the final eye or arm position
 	Parameters
 	----------
-	control_init : array of shape (n_pixels),
+	control_init : array of shape ((t_T+t_R)/dt+1),
 		initial value of the control
 	m : float,
 		a plant parameter
@@ -27,6 +27,8 @@ class MinimumVarianceControl:
 		initial values of both position and velocity
 	xT : array of shape (2,1)
 		values at time T of both position and velocity
+	v : float,
+		velocity of the target (deg/s)
 	n_iter : int,
 		total number of iterations to perform
 	eta : float,
@@ -37,7 +39,7 @@ class MinimumVarianceControl:
 
 	Attributes
 	----------
-	control : array, [n_pixels]
+	control : array, [(t_T+t_R)/dt+1]
 		control extracted from the data
 	Notes
 	-----
@@ -48,8 +50,8 @@ class MinimumVarianceControl:
 
 	"""
 
-	def __init__(self, control_init = None, m=10., beta=1., k=0.000005,
-				 dt=0.005, t_T=0.05, t_R=0.05, x0=np.array([0,0]), xT=np.array([10,0]),
+	def __init__(self, control_init = None, m=10., beta=1., k=0.0001,
+				 dt=0.005, t_T=0.05, t_R=0.05, x0=np.array([0,0]), xT=np.array([10,0]), v=0.,
 				 n_iter=2000, eta=0.0017,
 				 record_each=200):
 		self.control_init = control_init
@@ -61,6 +63,7 @@ class MinimumVarianceControl:
 		self.t_R = t_R
 		self.x0 = x0
 		self.xT = xT
+		self.v = v
 		self.n_iter = n_iter
 		self.eta = eta
 		self.record_each = record_each
@@ -77,7 +80,7 @@ class MinimumVarianceControl:
 		"""
 
 		return_fn = control_learning(self.control_init, self.m, self.beta, self.k,
-	    							 self.dt, self.t_T, self.t_R, self.x0, self.xT,
+	    							 self.dt, self.t_T, self.t_R, self.x0, self.xT, self.v,
 	    							 self.n_iter, self.eta,
 									 self.record_each)
 
@@ -88,8 +91,8 @@ class MinimumVarianceControl:
 
 
 
-def control_learning(control_init=None, m=10., beta=1., k=0.000005,
-					 dt=0.005, t_T=0.05, t_R=0.05, x0=np.array([0,0]), xT=np.array([10,0]),
+def control_learning(control_init=None, m=10., beta=1., k=0.0001,
+					 dt=0.005, t_T=0.05, t_R=0.05, x0=np.array([0,0]), xT=np.array([10,0]), v=0.,
 					 n_iter=2000, eta=0.0017,
 					 record_each=200):
 	"""
@@ -102,7 +105,7 @@ def control_learning(control_init=None, m=10., beta=1., k=0.000005,
 	u_new = u_old - eta*grad(C(u))
 	Parameters
 	----------
-	control_init : array of shape (n_pixels),
+	control_init : array of shape ((t_T+t_R)/dt+1),
 		initial value of the control
 	m : float,
 		a plant parameter
@@ -120,6 +123,8 @@ def control_learning(control_init=None, m=10., beta=1., k=0.000005,
 		initial values of both position and velocity
 	xT : array of shape (2, 1)
 		values at time T of both position and velocity
+	v : float,
+	velocity of the target (deg/s)
 	n_iter : int,
 		total number of iterations to perform
 	eta : float,
@@ -130,7 +135,7 @@ def control_learning(control_init=None, m=10., beta=1., k=0.000005,
 
 	Returns
 	-------
-	control : array of shape (n_pixels),
+	control : array of shape ((t_T+t_R)/dt+1),
 		the solutions to the control learning problem
 	"""
 
@@ -138,9 +143,9 @@ def control_learning(control_init=None, m=10., beta=1., k=0.000005,
 	import os
 	from os.path import isfile
 
-	if os.path.isfile('/home/baptiste/Documents/2017_OptimalPrecision/DataRecording/'+'dt_'+str(dt)+'/'+'HW_beta'+str(beta)+'_m'+str(m)+'_dt'+str(dt)+'_k'+str(k)+'_niter'+str(n_iter)+'.pkl'):
+	if os.path.isfile('/home/baptiste/Documents/2017_OptimalPrecision/DataRecording/'+'dt_'+str(dt)+'/'+'HW_beta'+str(beta)+'_m'+str(m)+'_dt'+str(dt)+'_k'+str(k)+'_niter'+str(n_iter)+'v_'+str(v)+'.pkl'):
 		import pandas as pd
-		record = pd.read_pickle('/home/baptiste/Documents/2017_OptimalPrecision/DataRecording/'+'dt_'+str(dt)+'/'+'HW_beta'+str(beta)+'_m'+str(m)+'_dt'+str(dt)+'_k'+str(k)+'_niter'+str(n_iter)+'.pkl')
+		record = pd.read_pickle('/home/baptiste/Documents/2017_OptimalPrecision/DataRecording/'+'dt_'+str(dt)+'/'+'HW_beta'+str(beta)+'_m'+str(m)+'_dt'+str(dt)+'_k'+str(k)+'_niter'+str(n_iter)+'v_'+str(v)+'.pkl')
 		control = record.signal[n_iter]
 		return control, record
 
@@ -150,8 +155,6 @@ def control_learning(control_init=None, m=10., beta=1., k=0.000005,
 			import pandas as pd
 			record = pd.DataFrame()
 
-		n_pixels = control_init.shape[0]
-
 		A = np.array([[1., 1.],[0., 1-beta/m]])
 		B = np.array([0., 1/m])
 
@@ -159,6 +162,7 @@ def control_learning(control_init=None, m=10., beta=1., k=0.000005,
 		R = int(t_R/dt)
 		time = np.linspace(0, t_T+t_R, R+T+1)
 		time_ms = time*1000
+		mult = 0.01
 
 		def power(A, n): 
 			"""
@@ -208,7 +212,7 @@ def control_learning(control_init=None, m=10., beta=1., k=0.000005,
 			if t == 0:
 				return x0
 			else:
-				return ((ci[:,0:t]*np.flipud(u[0:t])).sum(axis = 1))*np.array([1,1/dt])
+				return ((ci_array[:,0:t]*np.flipud(u[0:t])).sum(axis = 1))*np.array([1,1/dt])
 
 
 		def vexpectation(u):
@@ -242,7 +246,7 @@ def control_learning(control_init=None, m=10., beta=1., k=0.000005,
 			"""
 			compute the bias at time t given the control signal u
 			"""
-			return ((expectation(u, t)-xT)**2).sum()
+			return (expectation(u, t)-(xT+np.array([v*t*dt,v])))**2
 
 
 		def cost(u):
@@ -253,21 +257,17 @@ def control_learning(control_init=None, m=10., beta=1., k=0.000005,
 				return(variance(u,t))
 			var_vec = np.vectorize(var1d)
 			def bias1d(t):
-				return(bias(u,t))
+				return((bias(u,t)*np.array([1,mult])**2).sum())
 			bias_vec = np.vectorize(bias1d)
 
 			return var_vec(T+1+np.arange(R)).sum() + bias_vec(T+np.arange(R+1)).sum()
 
 
-		def cost_deriv(u, i):
-			"""
-			Derivative of the cost function with respect to u_i
-			"""
+		def cost_deriv(u, i): # Derivative of the cost function with respect to u_i
 			if i < T:
-				return (2*np.transpose(ci_array[:,(T-i-1):(T+R-i)])*np.array(([expectation(u,t).tolist() for t in (T+np.arange(R+1))])-xT)).sum() + 2*(m**2)*k*u[i]*(ci0_array[(T+1-i-1):(T+R-i)]**2).sum()
+				return (2*np.transpose(ci_array[:,(T-i-1):(T+R-i)])*np.array([((expectation(u,t)-xT-np.array([v*t*dt,v]))*np.array([1,mult])).tolist() for t in (T+np.arange(R+1))])).sum() + 2*(m**2)*k*u[i]*(ci0_array[(T+1-i-1):(T+R-i)]**2).sum()
 			else:
-				return (2*np.transpose(ci_array[:,0:(T+R-i)])*([expectation(u,t).tolist() for t in (i+1+np.arange(R+T-i))]-xT)).sum() + 2*(m**2)*k*u[i]*(ci0_array[0:(T+R-i)]**2).sum()
-
+				return (2*np.transpose(ci_array[:,0:(T+R-i)])*np.array([((expectation(u,t)-xT-np.array([v*t*dt,v]))*np.array([1,mult])).tolist() for t in (i+1+np.arange(R+T-i))])).sum() + 2*(m**2)*k*u[i]*(ci0_array[0:(T+R-i)]**2).sum()
 
 		def vcost_deriv(u):
 			"""
@@ -279,7 +279,28 @@ def control_learning(control_init=None, m=10., beta=1., k=0.000005,
 			return deriv_cost
 
 
-		control = np.copy(control_init)
+		if not (control_init is None):
+			control = control_init.copy()
+
+		else:
+			rho = m/(beta*T*dt)*np.log((1+np.exp(beta*T*dt/m))/2)
+			rhoT = int(np.round(T*rho))
+
+			u_bangbang = np.zeros(T+R+1)
+			u_old = u_bangbang.copy()
+			prev_sum = sum([sum((expectation(u_old,t)-xT)**2) for t in T+np.arange(R+1)])
+			for i in np.arange(1000):
+				for j in np.arange(1000):
+					u_bangbang[0:(rhoT+1)] = i/10
+					u_bangbang[(rhoT+1):(T+1)] = -j/10
+					val = np.array([(((expectation(u_bangbang,t)-xT)*np.array([1,mult]))**2).sum() for t in T+np.arange(R+1)]).sum()
+					if val < prev_sum:
+						u_old = u_bangbang.copy()
+						prev_sum = val
+			control = u_old.copy()
+
+
+
 		for i_iter in np.arange(n_iter):
 			control_old = control.copy()
 			control[0:T+R] = control_old[0:T+R] - eta*np.array([cost_deriv(control_old, i) for i in np.arange(T+R)])
@@ -305,7 +326,7 @@ def control_learning(control_init=None, m=10., beta=1., k=0.000005,
 
 		record = pd.concat([record, record_last])
 
-		record.to_pickle('/home/baptiste/Documents/2017_OptimalPrecision/DataRecording/'+'dt_'+str(dt)+'/'+'HW_beta'+str(beta)+'_m'+str(m)+'_dt'+str(dt)+'_k'+str(k)+'_niter'+str(n_iter)+'.pkl')
+		record.to_pickle('/home/baptiste/Documents/2017_OptimalPrecision/DataRecording/'+'dt_'+str(dt)+'/'+'HW_beta'+str(beta)+'_m'+str(m)+'_dt'+str(dt)+'_k'+str(k)+'_niter'+str(n_iter)+'v_'+str(v)+'.pkl')
 
 		if record_each==0:
 			return control
