@@ -299,7 +299,7 @@ def control_learning(control_init=None, m=10., beta=1., k=0.0001,
 						prev_sum = val
 			control = u_old.copy()
 
-
+		control[T+R] = dt*v # ok for v = 20 ; need more test to approve the formula
 
 		for i_iter in np.arange(n_iter):
 			control_old = control.copy()
