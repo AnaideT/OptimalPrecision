@@ -69,3 +69,28 @@ def plot_variance(record_variance, record_each, n_iter, t_T, t_R, dt):
 	ax.set_xlabel('Time (ms)', fontsize=14)
 	ax.set_ylabel('Positional variance', fontsize=14)
 
+
+def plot_cost(record_cost, record_each, n_iter):
+	fig_width = 15
+	fig, ax = plt.subplots(1, 1, figsize=(fig_width, fig_width/1.618))
+	N_show = n_iter//record_each+1
+
+	viter = np.linspace(0, n_iter, N_show)
+
+	ax.plot(viter, record_cost)
+	ax.set_title('Cost')
+	ax.set_xlabel('Number of iterations', fontsize=14)
+	ax.set_ylabel('Cost', fontsize=14)
+
+
+def plot_posT(record_posT, record_each, n_iter):
+	fig_width = 15
+	fig, ax = plt.subplots(1, 1, figsize=(fig_width, fig_width/1.618))
+	N_show = n_iter//record_each+1
+
+	viter = np.linspace(0, n_iter, N_show)
+
+	ax.plot(viter, record_posT)
+	ax.set_title('Position at time T')
+	ax.set_xlabel('Number of iterations', fontsize=14)
+	ax.set_ylabel('Angle (deg)', fontsize=14)
