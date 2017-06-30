@@ -14,10 +14,10 @@ def plot_signal(record_signal, record_each, n_iter, t_T, t_R, dt):
 
 	for i in np.arange(N_show):
 		if i == 0:
-			ax.plot(np.linspace(0, t_T+t_R, 10001), record_signal[0], '-')
+			ax.plot(np.linspace(0, (t_T+t_R)*1000, 10001), record_signal[0], '-')
 		else:
 			ax.plot(time_ms, record_signal[i*record_each], '-')
-			
+
 	ax.set_title(r'Control signal $u$')
 	ax.set_xlabel('Time (ms)', fontsize=14)
 	ax.set_ylabel(r'$u$', fontsize=14)
@@ -35,7 +35,7 @@ def plot_position(record_position, record_each, n_iter, t_T, t_R, dt):
 
 	for i in np.arange(N_show):
 		if i == 0:
-			ax.plot(np.linspace(0, t_T+t_R, 10001), record_position[0], '-')
+			ax.plot(np.linspace(0, (t_T+t_R)*1000, 10001), record_position[0], '-')
 		else:
 			ax.plot(time_ms, record_position[i*record_each], '-')
 
@@ -56,7 +56,7 @@ def plot_velocity(record_velocity, record_each, n_iter, t_T, t_R, dt):
 
 	for i in np.arange(N_show):
 		if i == 0:
-			ax.plot(np.linspace(0, t_T+t_R, 10001), record_velocity[0], '-')
+			ax.plot(np.linspace(0, (t_T+t_R)*1000, 10001), record_velocity[0], '-')
 		else:
 			ax.plot(time_ms, record_velocity[i*record_each], '-')
 
@@ -131,9 +131,9 @@ def all_plots(record, record_each, n_iter, t_T, t_R, dt, xT, v):
 
 	fig_width = 15
 	fig, ax = plt.subplots(1, 1, figsize=(fig_width, fig_width/1.618))
-	ax.plot(np.linspace(0, t_T+t_R, 10001), record_signal[0], lw=2, label="bangbang")
+	ax.plot(np.linspace(0, (t_T+t_R)*1000 , 10001), record_signal[0], lw=2, label="bangbang")
 	ax.plot(time_ms, record_signal[n_iter], lw=2, label="minimum-variance")
-	ax.plot([0,1000*(t_T+t_R)],[0,0],'r--')
+	ax.plot([0,1000*(t_T+t_R)], [0,0],'r--')
 	ax.legend()
 
 
@@ -141,9 +141,9 @@ def all_plots(record, record_each, n_iter, t_T, t_R, dt, xT, v):
 
 	fig_width = 15
 	fig, ax = plt.subplots(1, 1, figsize=(fig_width, fig_width/1.618))
-	ax.plot(np.linspace(0, t_T+t_R, 10001), record_position[0], lw=2, label="bangbang")
+	ax.plot(np.linspace(0, (t_T+t_R)*1000, 10001), record_position[0], lw=2, label="bangbang")
 	ax.plot(time_ms, record_position[n_iter], lw=2, label="minimum-variance")
-	ax.plot(np.linspace(0,(t_T+t_R)*1000,T+R+1),xT[0]+v*np.linspace(0,(t_T+t_R)*1000,T+R+1)/1000,'r--')
+	ax.plot(np.linspace(0,(t_T+t_R)*1000, T+R+1),xT[0]+v*np.linspace(0,t_T+t_R,T+R+1), 'r--')
 	ax.legend()
 
 
@@ -151,9 +151,9 @@ def all_plots(record, record_each, n_iter, t_T, t_R, dt, xT, v):
 
 	fig_width = 15
 	fig, ax = plt.subplots(1, 1, figsize=(fig_width, fig_width/1.618))
-	ax.plot(np.linspace(0, t_T+t_R, 10001), record_velocity[0], lw=2, label="bangbang")
+	ax.plot(np.linspace(0, (t_T+t_R)*1000, 10001), record_velocity[0], lw=2, label="bangbang")
 	ax.plot(time_ms, record_velocity[n_iter], lw=2, label="minimum-variance")
-	ax.plot(np.linspace(0,(t_T+t_R)*1000,T+R+1),v*np.ones(T+R+1),'r--')
+	ax.plot(np.linspace(0,(t_T+t_R)*1000, T+R+1),v*np.ones(T+R+1),'r--')
 	ax.legend()
 
 
