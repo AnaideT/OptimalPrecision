@@ -248,6 +248,7 @@ def control_learning(control_init=None, m=1., beta=100., k=0.0001,
 			"""
 			return (((expectation(u, t)-(xT+np.array([v*t*dt,v])))**2)*np.array([1,mult])).sum()
 
+
 		def cost(u):
 			"""
 			compute the post-movement cost given the control signal u
@@ -271,6 +272,7 @@ def control_learning(control_init=None, m=1., beta=100., k=0.0001,
 			else:
 				return (2*np.transpose(ci_array[:,0:(T+R-i)])*np.array([((expectation(u,t)-xT-np.array([v*t*dt,v]))*np.array([1,mult])).tolist() for t in (i+1+np.arange(R+T-i))])).sum() + 2*(m**2)*k*u[i]*(ci0_array[0:(T+R-i)]**2).sum()
 
+
 		def vcost_deriv(u):
 			"""
 			vectorized version of cost_deriv
@@ -281,46 +283,98 @@ def control_learning(control_init=None, m=1., beta=100., k=0.0001,
 			return deriv_cost
 
 
+		def ControlInitFunction(b, m, xT, dt, t_T, t_R, v0):
+			"""
+			Returns the bangbang solution that will be used as control_init
+			"""
+			T = int(t_T/dt)
+			R = int(t_R/dt)
+			time = np.linspace(0, t_T+t_R, R+T+1)
+
+			if v0==0.:
+				rho = m/(b*T*dt)*np.log((1+np.exp(b*T*dt/m))/2)
+				rhoT = int(np.round(T*rho))
+
+				Umax = b*xT/((2*rho-1)*T*dt-m/b*(2-np.exp(-rho*b*T*dt/m)-np.exp((1-rho)*b*T*dt/m)))
+
+				xx = np.concatenate((Umax/b*(time[0:rhoT]-m/b*(1-np.exp(-b/m*time[0:rhoT]))),
+									xT+Umax/b*(T*dt-time[rhoT:T]+m/b*(1-np.exp(b/m*(T*dt-time[rhoT:T])))),
+									xT*np.ones(R+1)))
+
+				vv = np.concatenate((Umax/b*(1-np.exp(-b/m*time[0:rhoT])),
+									-Umax/b*(1-np.exp(b/m*(T*dt-time[rhoT:T]))),
+									np.zeros(R+1)))
+
+				uu = np.concatenate((Umax*np.ones(rhoT),
+									-Umax*np.ones(T-rhoT),
+									np.zeros(R+1)))
+
+				return uu, xx, vv
+
+			else:
+				tau = m/b
+				vrho = np.linspace(0.5,1,1001)
+				y = (xT+v0*t_T+v0*tau*(1-np.exp((1-vrho)*t_T/tau)))*(2-np.exp(-vrho*t_T/tau)-np.exp((1-vrho)*t_T/tau))+v0*np.exp((1-vrho)*t_T/tau)*((1-vrho)*t_T+tau*(1-np.exp((1-vrho)*t_T/tau)))-v0*np.exp((1-vrho)*t_T/tau)*(vrho*t_T-tau*(1-np.exp(-vrho*t_T/tau)))
+
+				rho_pursuit = vrho[np.argmin(np.abs(y))]
+				rhoT_pursuit = int(np.round(T*rho_pursuit))
+
+				Umax_pursuit = b*v0*np.exp((1-rho_pursuit)*t_T/tau)/(2-np.exp((1-rho_pursuit)*t_T/tau)-np.exp(-rho_pursuit*t_T/tau))
+
+				x_pursuit = np.concatenate((Umax_pursuit/b*(time[0:rhoT_pursuit]-m/b*(1-np.exp(-b/m*time[0:rhoT_pursuit]))),
+											xT+v0*T*dt+Umax_pursuit/b*(T*dt-time[rhoT_pursuit:T]+m/b*(1-np.exp(b/m*(T*dt-time[rhoT_pursuit:T]))))+m/b*v0*(1-np.exp(b/m*(T*dt-time[rhoT_pursuit:T]))),
+											xT+v0*T*dt+v0*(time[T:(T+R+1)]-t_T)))
+
+				v_pursuit = np.concatenate((Umax_pursuit/b*(1-np.exp(-b/m*time[0:rhoT_pursuit])),
+											-Umax_pursuit/b*(1-np.exp(b/m*(T*dt-time[rhoT_pursuit:T])))+v0*np.exp(b/m*(T*dt-time[rhoT_pursuit:T])),
+											v0*np.ones(R+1)))
+
+				u_pursuit = np.concatenate((Umax_pursuit*np.ones(rhoT_pursuit),
+											-Umax_pursuit*np.ones(T-rhoT_pursuit),
+											b*v0*np.ones(R+1)))
+
+				return u_pursuit, x_pursuit, v_pursuit
+
+
 		if not (control_init is None):
 			control = control_init.copy()
 
 		else:
-			rho = m/(beta*T*dt)*np.log((1+np.exp(beta*T*dt/m))/2)
-			rhoT = int(np.round(T*rho))
+			control, pos, vel = ControlInitFunction(beta, m, xT[0], dt, t_T, t_R, v)
 
-			u_bangbang = np.zeros(T+R+1)
-			u_old = u_bangbang.copy()
-			prev_sum = sum([sum((expectation(u_old,t)-xT)**2) for t in T+np.arange(R+1)])
-			for i in np.arange(1000):
-				for j in np.arange(1000):
-					u_bangbang[0:(rhoT+1)] = i/10
-					u_bangbang[(rhoT+1):(T+1)] = -j/10
-					val = np.array([(((expectation(u_bangbang,t)-xT)*np.array([1,mult]))**2).sum() for t in T+np.arange(R+1)]).sum()
-					if val < prev_sum:
-						u_old = u_bangbang.copy()
-						prev_sum = val
-			control = u_old.copy()
+		control[T+R] = beta*v
 
-		control[T+R] = dt*v # ok for v = 20 ; need more test to approve the formula
+		cost_iter = np.zeros(0)
+		posT_iter = np.zeros(0)
 
 		for i_iter in np.arange(n_iter):
 			control_old = control.copy()
 			control[0:T+R] = control_old[0:T+R] - eta*np.array([cost_deriv(control_old, i) for i in np.arange(T+R)])
+			cost_iter = np.concatenate((cost_iter, np.array([cost(control_old)])))
+			posT_iter = np.concatenate((posT_iter, np.array([expectation(control_old, T)[0]])))
 
 			if record_each>0:
 				if i_iter % int(record_each) == 0:
+					control_rec = control_old.copy()
 					pos_rec = vexpectation(control_old)[:, 0]
 					vel_rec = vexpectation(control_old)[:, 1]
 					var_rec = vvariance(control_old)
-					cost_rec = cost(control_old)
-					posT_vec = vexpectation(control_old)[T, 0]
+					cost_rec = cost_iter.copy()
+					cost_iter = np.zeros(0)
+					posT_rec = posT_iter.copy()
+					posT_iter = np.zeros(0)
 
-					record_one = pd.DataFrame([{'signal':control_old,
+					if i_iter == 0:
+						control_rec, pos_rec, vel_rec = ControlInitFunction(beta, m, xT[0], 0.00001, t_T, t_R, v)
+
+
+
+					record_one = pd.DataFrame([{'signal':control_rec,
 												'position':pos_rec,
 												'velocity':vel_rec,
 												'variance':var_rec,
 												'cost':cost_rec,
-												'positionT':posT_vec}],
+												'positionT':posT_rec}],
 												index=[i_iter])
 					record = pd.concat([record, record_one])
 
@@ -328,11 +382,12 @@ def control_learning(control_init=None, m=1., beta=100., k=0.0001,
 									 'position':vexpectation(control)[:, 0],
 									 'velocity':vexpectation(control)[:, 1],
 									 'variance':vvariance(control),
-									 'cost':cost(control),
-									 'positionT':vexpectation(control)[T, 0]}],
+									 'cost':np.array([cost(control)]),
+									 'positionT':np.array([expectation(control,T)[0]])}],
 									 index=[n_iter])
 
 		record = pd.concat([record, record_last])
+
 
 		record.to_pickle('/home/baptiste/Documents/2017_OptimalPrecision/DataRecording/'+'dt_'+str(dt)+'/'+'HW_beta'+str(beta)+'_m'+str(m)+'_dt'+str(dt)+'_k'+str(k)+'_niter'+str(n_iter)+'v_'+str(v)+'.pkl')
 
@@ -340,5 +395,3 @@ def control_learning(control_init=None, m=1., beta=100., k=0.0001,
 			return control
 		else:
 			return control, record
-
-
