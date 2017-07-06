@@ -14,7 +14,7 @@ def plot_signal(record_signal, record_each, n_iter, t_T, t_R, dt):
 
 	for i in np.arange(N_show):
 		if i == 0:
-			ax.plot(np.linspace(0, (t_T+t_R)*1000, 10001), record_signal[0], '-')
+			ax.plot(np.linspace(0, (t_T+t_R)*1000, 101), record_signal[0], '-')
 		else:
 			ax.plot(time_ms, record_signal[i*record_each], '-')
 
@@ -35,7 +35,7 @@ def plot_position(record_position, record_each, n_iter, t_T, t_R, dt):
 
 	for i in np.arange(N_show):
 		if i == 0:
-			ax.plot(np.linspace(0, (t_T+t_R)*1000, 10001), record_position[0], '-')
+			ax.plot(np.linspace(0, (t_T+t_R)*1000, 101), record_position[0], '-')
 		else:
 			ax.plot(time_ms, record_position[i*record_each], '-')
 
@@ -56,7 +56,7 @@ def plot_velocity(record_velocity, record_each, n_iter, t_T, t_R, dt):
 
 	for i in np.arange(N_show):
 		if i == 0:
-			ax.plot(np.linspace(0, (t_T+t_R)*1000, 10001), record_velocity[0], '-')
+			ax.plot(np.linspace(0, (t_T+t_R)*1000, 101), record_velocity[0], '-')
 		else:
 			ax.plot(time_ms, record_velocity[i*record_each], '-')
 
