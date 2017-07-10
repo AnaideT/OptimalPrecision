@@ -388,7 +388,9 @@ def control_learning(control_init=None, m=1., beta=100., k=0.0001,
 
 		record = pd.concat([record, record_last])
 
-
+# '/home/baptiste/Documents/2017_OptimalPrecision' = '.'
+# import os
+# fname = os.path.join('DataRecording', 'machin', 'truc') 
 		record.to_pickle('/home/baptiste/Documents/2017_OptimalPrecision/DataRecording/'+'dt_'+str(dt)+'/'+'HW_beta'+str(beta)+'_m'+str(m)+'_dt'+str(dt)+'_k'+str(k)+'_niter'+str(n_iter)+'v_'+str(v)+'.pkl')
 
 		if record_each==0:
