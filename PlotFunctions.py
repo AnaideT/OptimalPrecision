@@ -7,14 +7,14 @@ def plot_signal(record_signal, record_each, n_iter, t_T, t_R, dt):
 	fig, ax = plt.subplots(1, 1, figsize=(fig_width, fig_width/1.618))
 	N_show = n_iter//record_each+1
 
-	T = int(t_T/dt)
-	R = int(t_R/dt)
+	T = int(np.round(t_T/dt))
+	R = int(np.round(t_R/dt))
 	time = np.linspace(0, t_T+t_R, R+T+1)
 	time_ms = time*1000
 
 	for i in np.arange(N_show):
 		if i == 0:
-			ax.plot(np.linspace(0, (t_T+t_R)*1000, 101), record_signal[0], '-')
+			ax.plot(np.linspace(0, (t_T+t_R)*1000, R+T+1), record_signal[0], '-')
 		else:
 			ax.plot(time_ms, record_signal[i*record_each], '-')
 
@@ -28,14 +28,14 @@ def plot_position(record_position, record_each, n_iter, t_T, t_R, dt):
 	fig, ax = plt.subplots(1, 1, figsize=(fig_width, fig_width/1.618))
 	N_show = n_iter//record_each+1
 
-	T = int(t_T/dt)
-	R = int(t_R/dt)
+	T = int(np.round(t_T/dt))
+	R = int(np.round(t_R/dt))
 	time = np.linspace(0, t_T+t_R, R+T+1)
 	time_ms = time*1000
 
 	for i in np.arange(N_show):
 		if i == 0:
-			ax.plot(np.linspace(0, (t_T+t_R)*1000, 101), record_position[0], '-')
+			ax.plot(np.linspace(0, (t_T+t_R)*1000, R+T+1), record_position[0], '-')
 		else:
 			ax.plot(time_ms, record_position[i*record_each], '-')
 
@@ -49,14 +49,14 @@ def plot_velocity(record_velocity, record_each, n_iter, t_T, t_R, dt):
 	fig, ax = plt.subplots(1, 1, figsize=(fig_width, fig_width/1.618))
 	N_show = n_iter//record_each+1
 
-	T = int(t_T/dt)
-	R = int(t_R/dt)
+	T = int(np.round(t_T/dt))
+	R = int(np.round(t_R/dt))
 	time = np.linspace(0, t_T+t_R, R+T+1)
 	time_ms = time*1000
 
 	for i in np.arange(N_show):
 		if i == 0:
-			ax.plot(np.linspace(0, (t_T+t_R)*1000, 101), record_velocity[0], '-')
+			ax.plot(np.linspace(0, (t_T+t_R)*1000, R+T+1), record_velocity[0], '-')
 		else:
 			ax.plot(time_ms, record_velocity[i*record_each], '-')
 
@@ -70,8 +70,8 @@ def plot_variance(record_variance, record_each, n_iter, t_T, t_R, dt):
 	fig, ax = plt.subplots(1, 1, figsize=(fig_width, fig_width/1.618))
 	N_show = n_iter//record_each+1
 
-	T = int(t_T/dt)
-	R = int(t_R/dt)
+	T = int(np.round(t_T/dt))
+	R = int(np.round(t_R/dt))
 	time = np.linspace(0, t_T+t_R, R+T+1)
 	time_ms = time*1000
 
@@ -124,8 +124,8 @@ def all_plots(record, record_each, n_iter, t_T, t_R, dt, xT, v):
 
 	plot_signal(record_signal, record_each, n_iter, t_T, t_R, dt)
 
-	T = int(t_T/dt)
-	R = int(t_R/dt)
+	T = int(np.round(t_T/dt))
+	R = int(np.round(t_R/dt))
 	time = np.linspace(0, t_T+t_R, R+T+1)
 	time_ms = time*1000
 
