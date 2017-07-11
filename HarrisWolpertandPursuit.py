@@ -365,8 +365,7 @@ def control_learning(control_init=None, m=1., beta=100., k=0.0001,
 					posT_iter = np.zeros(0)
 
 					if i_iter == 0:
-						control_rec, pos_rec, vel_rec = ControlInitFunction(beta, m, xT[0], 0.00001, t_T, t_R, v)
-
+						control_not_used, pos_rec, vel_rec = ControlInitFunction(beta, m, xT[0], 0.000001, t_T, t_R, v)
 
 
 					record_one = pd.DataFrame([{'signal':control_rec,
