@@ -143,9 +143,9 @@ def control_learning(control_init=None, m=1., beta=100., k=0.0001,
 	import os
 	from os.path import isfile
 
-	if os.path.isfile('/home/baptiste/Documents/2017_OptimalPrecision/DataRecording/'+'dt_'+str(dt)+'/'+'HW_beta'+str(beta)+'_m'+str(m)+'_dt'+str(dt)+'_k'+str(k)+'_niter'+str(n_iter)+'v_'+str(v)+'.pkl'):
+	if os.path.isfile('../2017_OptimalPrecision/DataRecording/'+'dt_'+str(dt)+'/'+'HW_beta'+str(beta)+'_m'+str(m)+'_dt'+str(dt)+'_k'+str(k)+'_niter'+str(n_iter)+'v_'+str(v)+'.pkl'):
 		import pandas as pd
-		record = pd.read_pickle('/home/baptiste/Documents/2017_OptimalPrecision/DataRecording/'+'dt_'+str(dt)+'/'+'HW_beta'+str(beta)+'_m'+str(m)+'_dt'+str(dt)+'_k'+str(k)+'_niter'+str(n_iter)+'v_'+str(v)+'.pkl')
+		record = pd.read_pickle('../2017_OptimalPrecision/DataRecording/'+'dt_'+str(dt)+'/'+'HW_beta'+str(beta)+'_m'+str(m)+'_dt'+str(dt)+'_k'+str(k)+'_niter'+str(n_iter)+'v_'+str(v)+'.pkl')
 		control = record.signal[n_iter]
 		return control, record
 
@@ -390,7 +390,7 @@ def control_learning(control_init=None, m=1., beta=100., k=0.0001,
 # '/home/baptiste/Documents/2017_OptimalPrecision' = '.'
 # import os
 # fname = os.path.join('DataRecording', 'machin', 'truc') 
-		record.to_pickle('/home/baptiste/Documents/2017_OptimalPrecision/DataRecording/'+'dt_'+str(dt)+'/'+'HW_beta'+str(beta)+'_m'+str(m)+'_dt'+str(dt)+'_k'+str(k)+'_niter'+str(n_iter)+'v_'+str(v)+'.pkl')
+		record.to_pickle('../2017_OptimalPrecision/DataRecording/'+'dt_'+str(dt)+'/'+'HW_beta'+str(beta)+'_m'+str(m)+'_dt'+str(dt)+'_k'+str(k)+'_niter'+str(n_iter)+'v_'+str(v)+'.pkl')
 
 		if record_each==0:
 			return control
