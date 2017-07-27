@@ -11,10 +11,8 @@ class MinimumVarianceControl:
 	----------
 	control_init : array of shape ((t_T+t_R)/dt+1),
 		initial value of the control
-	m : float,
-		a plant parameter
-	beta : float
-		another plant parameter
+	tau : float,
+		a plant parameter (s)
 	k : float,
 		coefficient of intensity of the multiplicative noise
 	dt : float,
@@ -50,13 +48,12 @@ class MinimumVarianceControl:
 
 	"""
 
-	def __init__(self, control_init = None, m=1., beta=100., k=0.0001,
+	def __init__(self, control_init = None, tau = 0.013, k=0.0001,
 				 dt=0.005, t_T=0.05, t_R=0.05, x0=np.array([0,0]), xT=np.array([10,0]), v=0.,
 				 n_iter=2000, eta=0.0017,
 				 record_each=200):
 		self.control_init = control_init
-		self.m = m
-		self.beta = beta
+		self.tau = tau
 		self.k = k
 		self.dt = dt
 		self.t_T = t_T
@@ -79,7 +76,7 @@ class MinimumVarianceControl:
 	        Returns the instance itself.
 		"""
 
-		return_fn = control_learning(self.control_init, self.m, self.beta, self.k,
+		return_fn = control_learning(self.control_init, self.tau, self.k,
 	    							 self.dt, self.t_T, self.t_R, self.x0, self.xT, self.v,
 	    							 self.n_iter, self.eta,
 									 self.record_each)
@@ -91,7 +88,7 @@ class MinimumVarianceControl:
 
 
 
-def control_learning(control_init=None, m=1., beta=100., k=0.0001,
+def control_learning(control_init=None, tau = 0.013, k=0.0001,
 					 dt=0.005, t_T=0.05, t_R=0.05, x0=np.array([0,0]), xT=np.array([10,0]), v=0.,
 					 n_iter=2000, eta=0.0017,
 					 record_each=200):
@@ -107,10 +104,8 @@ def control_learning(control_init=None, m=1., beta=100., k=0.0001,
 	----------
 	control_init : array of shape ((t_T+t_R)/dt+1),
 		initial value of the control
-	m : float,
-		a plant parameter
-	beta : float
-		another plant parameter
+	tau : float
+		a plant parameter (s)
 	k : float,
 		coefficient of intensity of the multiplicative noise
 	dt : float,
@@ -139,71 +134,105 @@ def control_learning(control_init=None, m=1., beta=100., k=0.0001,
 		the solutions to the control learning problem
 	"""
 
-	import pickle
-	import os
-	from os.path import isfile
 
-	if os.path.isfile('../2017_OptimalPrecision/DataRecording/'+'dt_'+str(dt)+'/'+'HW_beta'+str(beta)+'_m'+str(m)+'_dt'+str(dt)+'_k'+str(k)+'_niter'+str(n_iter)+'v_'+str(v)+'.pkl'):
-		import pandas as pd
-		record = pd.read_pickle('../2017_OptimalPrecision/DataRecording/'+'dt_'+str(dt)+'/'+'HW_beta'+str(beta)+'_m'+str(m)+'_dt'+str(dt)+'_k'+str(k)+'_niter'+str(n_iter)+'v_'+str(v)+'.pkl')
-		control = record.signal[n_iter]
-		return control, record
+	A = np.array([[1., dt],[0., 1-dt/tau]])
+	B = np.array([0., dt])
 
-	else:
+	T = int(t_T/dt)
+	R = int(t_R/dt)
+	time = np.linspace(0, t_T+t_R, R+T+1)
+	time_ms = time*1000
+	mult = 0.01
 
-		if record_each>0:
-			import pandas as pd
-			record = pd.DataFrame()
 
-		A = np.array([[1., dt],[0., 1-dt*beta/m]])
-		B = np.array([0., dt/m])
 
+
+	def SymmetricalBangbang(tau, xT, dt, t_T, t_R, v0):
+		"""
+		Returns the symmetrical (U+ = - U-) bangbang solution
+		"""
 		T = int(t_T/dt)
 		R = int(t_R/dt)
 		time = np.linspace(0, t_T+t_R, R+T+1)
-		time_ms = time*1000
-		mult = 0.01
 
-		def power(A, n): 
-			"""
-			renvoie A puissance n où A est une matrice carrée
-			    
-			"""
-			if n == 0:
-				return(np.eye(int(np.sqrt(np.size(A)))))
-			elif n == 1:
-				return A
-			else:
-				if n % 2 == 0:
-					A_half = power(A, n//2)
-					return(A_half.dot(A_half))
-				else:
-					A_half = power(A, (n-1)//2)
-					return(A.dot(A_half.dot(A_half)))
+		if v0==0.:
+			rho = tau/t_T*np.log((1+np.exp(t_T/tau))/2)
+			rhoT = int(np.round(T*rho))
+
+			Umax = 1/tau*xT/((2*rho-1)*t_T-tau*(2-np.exp(-rho*t_T/tau)-np.exp((1-rho)*t_T/tau)))
+
+			xx = np.concatenate((Umax*tau*(time[0:rhoT]-tau*(1-np.exp(-time[0:rhoT]/tau))),
+								xT+Umax*tau*(t_T-time[rhoT:T]+tau*(1-np.exp((t_T-time[rhoT:T])/tau))),
+								xT*np.ones(R+1)))
+
+			vv = np.concatenate((Umax*tau*(1-np.exp(-time[0:rhoT]/tau)),
+								-Umax*tau*(1-np.exp((t_T-time[rhoT:T])/tau)),
+								np.zeros(R+1)))
+
+			uu = np.concatenate((Umax*np.ones(rhoT),
+								-Umax*np.ones(T-rhoT),
+								np.zeros(R+1)))
+
+			return uu, xx, vv
+
+		else:
+			vrho = np.linspace(0.5,1,1000001)
+			y = (xT+v0*t_T+v0*tau*(1-np.exp((1-vrho)*t_T/tau)))*(2-np.exp(-vrho*t_T/tau)-np.exp((1-vrho)*t_T/tau))+v0*np.exp((1-vrho)*t_T/tau)*((1-vrho)*t_T+tau*(1-np.exp((1-vrho)*t_T/tau)))-v0*np.exp((1-vrho)*t_T/tau)*(vrho*t_T-tau*(1-np.exp(-vrho*t_T/tau)))
+
+			rho_pursuit = vrho[np.argmin(np.abs(y))]
+			rhoT_pursuit = int(np.round(T*rho_pursuit))
+
+			Umax_pursuit = 1/tau*v0*np.exp((1-rho_pursuit)*t_T/tau)/(2-np.exp((1-rho_pursuit)*t_T/tau)-np.exp(-rho_pursuit*t_T/tau))
+
+			x_pursuit = np.concatenate((Umax_pursuit*tau*(time[0:rhoT_pursuit]-tau*(1-np.exp(-time[0:rhoT_pursuit]/tau))),
+										xT+v0*t_T+Umax_pursuit*tau*(T*dt-time[rhoT_pursuit:T]+tau*(1-np.exp((t_T-time[rhoT_pursuit:T])/tau)))+tau*v0*(1-np.exp((t_T-time[rhoT_pursuit:T])/tau)),
+										xT+v0*t_T+v0*(time[T:(T+R+1)]-t_T)))
+
+			v_pursuit = np.concatenate((Umax_pursuit*tau*(1-np.exp(-time[0:rhoT_pursuit]/tau)),
+										-Umax_pursuit*tau*(1-np.exp((t_T-time[rhoT_pursuit:T])/tau))+v0*np.exp((t_T-time[rhoT_pursuit:T])/tau),
+										v0*np.ones(R+1)))
+
+			u_pursuit = np.concatenate((Umax_pursuit*np.ones(rhoT_pursuit),
+										-Umax_pursuit*np.ones(T-rhoT_pursuit),
+										1/tau*v0*np.ones(R+1)))
+
+			return u_pursuit, x_pursuit, v_pursuit
 
 
-		def A_pow(A):
+
+	def AsymmetricalBangbang(tau, xT, dt2, t_T, t_R, v0):
+		"""
+		Returns the asymmetrical (U+ =/= - U-) bangbang solution
+		"""
+		T2 = int(t_T/dt2)
+		R2 = int(t_R/dt2)
+		time = np.linspace(0, t_T+t_R, R2+T2+1)
+
+		A2 = np.array([[1, dt2], [0, 1-dt2/tau]])
+		B2 = np.array([0., dt2])
+
+		def A2_pow(A):
 			"""
 			compute the array of A^i of shape (T+R+1, 2, 2)
 			"""
-			A_pow_array = np.zeros((T+R+1, 2, 2))
-			for i in np.arange(T+R+1):
-				A_pow_array[i, :, :] = power(A, i)
-			return A_pow_array
+			A2_pow_array = np.zeros((T2+R2+1, 2, 2))
+			for i in np.arange(T2+R2+1):
+				A2_pow_array[i, :, :] = power(A, i)
+			return A2_pow_array
 
-		A_pow_array = A_pow(A)
+		A2_pow_array = A2_pow(A2)
 
-		ci0_array = np.zeros(T+R+1)
-		ci1_array = np.zeros(T+R+1)
+		ci0_array2 = np.zeros(T2+R2+1)
+		ci1_array2 = np.zeros(T2+R2+1)
 
-		for i in np.arange(T+R+1):
-			ci0_array[i] = (A_pow_array[i, :, :].dot(B))[0]
-			ci1_array[i] = (A_pow_array[i, :, :].dot(B))[1]
+		for i in np.arange(T2+R2+1):
+			ci0_array2[i] = (A2_pow_array[i, :, :].dot(B2))[0]
+			ci1_array2[i] = (A2_pow_array[i, :, :].dot(B2))[1]
 
-		ci_array = np.array([ci0_array,ci1_array])
+		ci_array2 = np.array([ci0_array2, ci1_array2])
 
 
-		def expectation(u, t):
+		def expectation2(u, t):
 			"""
 			compute the expectation at time t given the control signal u
 
@@ -212,137 +241,251 @@ def control_learning(control_init=None, m=1., beta=100., k=0.0001,
 			if t == 0:
 				return x0
 			else:
-				return (ci_array[:,0:t]*np.flipud(u[0:t])).sum(axis = 1)
+				return (ci_array2[:,0:t]*np.flipud(u[0:t])).sum(axis = 1)
 
-
-		def vexpectation(u):
-			"""
-			vectorized version of expectation
-			"""
-			exp = np.zeros((T+R+1, 2))
-			for i in np.arange(T+R+1):
-				exp[i, :] = expectation(u,i)
-			return exp
-
-
-		def variance(u, t):
+		def variance2(u, t):
 			"""
 			compute the variance at time t given the control signal u
 			"""
-			return (m**2)*k*(np.flipud(ci0_array[0:t]**2)*u[0:t]**2).sum()
+			return k*(np.flipud(ci0_array2[0:t]**2)*u[0:t]**2).sum()
 
 
-		def vvariance(u):
-			"""
-			vectorized version of variance
-			"""
-			var = np.zeros(T+R+1)
-			for i in np.arange(T+R+1):
-				var[i] = variance(u,i)
-			return var
+		n = 100 # number of rho's values
+		rho = np.linspace(0.5,0.999,n) # rho's tested values
 
 
-		def bias(u, t):
-			"""
-			compute the bias at time t given the control signal u
-			"""
-			return (((expectation(u, t)-(xT+np.array([v*t*dt,v])))**2)*np.array([1,mult])).sum()
+		Umoins = 1/tau*((xT+v0*(t_T+tau))*(1-np.exp(-rho*t_T/tau))-v0*rho*t_T*np.exp((1-rho)*t_T/tau))/(t_T-(1-rho)*t_T*np.exp(-rho*t_T/tau)-rho*t_T*np.exp((1-rho)*t_T/tau))
+
+		Uplus = (1-np.exp((1-rho)*t_T/tau))/(1-np.exp(-rho*t_T/tau))*Umoins+1/tau*v0*np.exp((1-rho)*t_T/tau)/(1-np.exp(-rho*t_T/tau))
+
+		u = np.zeros((n-1, T2+R2+1))
+
+		for i in np.arange(n-1):
+			rhoT = np.round(T2*rho[i])
+			u[i,:] = np.concatenate((Uplus[i]*np.ones(rhoT), Umoins[i]*np.ones(T2-rhoT), 1/tau*v0*np.ones(R2+1)))
 
 
-		def cost(u):
-			"""
-			compute the post-movement cost given the control signal u
-			"""
-			def var1d(t):
-				return(variance(u,t))
-			var_vec = np.vectorize(var1d)
-			def bias1d(t):
-				return((bias(u,t)**2).sum())
-			bias_vec = np.vectorize(bias1d)
+		position = np.zeros((n-1, T2+R2+1))
+		velocity = np.zeros((n-1, T2+R2+1))
 
-			return var_vec(T+1+np.arange(R)).sum() + bias_vec(T+np.arange(R+1)).sum()
+		for i in np.arange(n-1):
+			for j in np.arange(T2+R2+1):
+				mean = expectation2(u[i,:], j)
+				position[i,j] = mean[0]
+				velocity[i,j] = mean[1]
 
 
-		def cost_deriv(u, i):
-			"""
-			Derivative of the cost function with respect to u_i
-			"""
-			if i < T:
-				return (2*np.transpose(ci_array[:,(T-i-1):(T+R-i)])*np.array([((expectation(u,t)-xT-np.array([v*t*dt,v]))*np.array([1,mult])).tolist() for t in (T+np.arange(R+1))])).sum() + 2*(m**2)*k*u[i]*(ci0_array[(T+1-i-1):(T+R-i)]**2).sum()
+		variancev = np.zeros((n-1, T2+R2+1))
+
+		for i in np.arange(n-1):
+			for j in np.arange(T2+R2+1):
+				variancev[i,j] = variance2(u[i,:], j)
+
+
+		somme = np.zeros(n-1)
+		for i in np.arange(n-1):
+			for j in T2+np.arange(R2+1):
+				somme[i] += variancev[i,j]
+
+		ind_best = np.argmin(somme)
+
+		return u[ind_best, :], position[ind_best, :], velocity[ind_best, :], variancev[ind_best, :]*dt/dt2
+
+
+	def power(A, n): 
+		"""
+		renvoie A puissance n où A est une matrice carrée
+		    
+		"""
+		if n == 0:
+			return(np.eye(int(np.sqrt(np.size(A)))))
+		elif n == 1:
+			return A
+		else:
+			if n % 2 == 0:
+				A_half = power(A, n//2)
+				return(A_half.dot(A_half))
 			else:
-				return (2*np.transpose(ci_array[:,0:(T+R-i)])*np.array([((expectation(u,t)-xT-np.array([v*t*dt,v]))*np.array([1,mult])).tolist() for t in (i+1+np.arange(R+T-i))])).sum() + 2*(m**2)*k*u[i]*(ci0_array[0:(T+R-i)]**2).sum()
+				A_half = power(A, (n-1)//2)
+				return(A.dot(A_half.dot(A_half)))
 
 
-		def vcost_deriv(u):
-			"""
-			vectorized version of cost_deriv
-			"""
-			deriv_cost = np.zeros(T+R+1)
-			for i in np.arange(T+R+1-1):
-				deriv_cost[i] = cost_deriv(u,i)
-			return deriv_cost
+	def A_pow(A):
+		"""
+		compute the array of A^i of shape (T+R+1, 2, 2)
+		"""
+		A_pow_array = np.zeros((T+R+1, 2, 2))
+		for i in np.arange(T+R+1):
+			A_pow_array[i, :, :] = power(A, i)
+		return A_pow_array
+
+	A_pow_array = A_pow(A)
+
+	ci0_array = np.zeros(T+R+1)
+	ci1_array = np.zeros(T+R+1)
+
+	for i in np.arange(T+R+1):
+		ci0_array[i] = (A_pow_array[i, :, :].dot(B))[0]
+		ci1_array[i] = (A_pow_array[i, :, :].dot(B))[1]
+
+	ci_array = np.array([ci0_array,ci1_array])
 
 
-		def ControlInitFunction(b, m, xT, dt, t_T, t_R, v0):
-			"""
-			Returns the bangbang solution that will be used as control_init
-			"""
-			T = int(t_T/dt)
-			R = int(t_R/dt)
-			time = np.linspace(0, t_T+t_R, R+T+1)
+	def expectation(u, t):
+		"""
+		compute the expectation at time t given the control signal u
 
-			if v0==0.:
-				rho = m/(b*T*dt)*np.log((1+np.exp(b*T*dt/m))/2)
-				rhoT = int(np.round(T*rho))
+		array of shape (2, 1)
+		"""
+		if t == 0:
+			return x0
+		else:
+			return (ci_array[:,0:t]*np.flipud(u[0:t])).sum(axis = 1)
 
-				Umax = b*xT/((2*rho-1)*T*dt-m/b*(2-np.exp(-rho*b*T*dt/m)-np.exp((1-rho)*b*T*dt/m)))
 
-				xx = np.concatenate((Umax/b*(time[0:rhoT]-m/b*(1-np.exp(-b/m*time[0:rhoT]))),
-									xT+Umax/b*(T*dt-time[rhoT:T]+m/b*(1-np.exp(b/m*(T*dt-time[rhoT:T])))),
-									xT*np.ones(R+1)))
+	def vexpectation(u):
+		"""
+		vectorized version of expectation
+		"""
+		exp = np.zeros((T+R+1, 2))
+		for i in np.arange(T+R+1):
+			exp[i, :] = expectation(u,i)
+		return exp
 
-				vv = np.concatenate((Umax/b*(1-np.exp(-b/m*time[0:rhoT])),
-									-Umax/b*(1-np.exp(b/m*(T*dt-time[rhoT:T]))),
-									np.zeros(R+1)))
 
-				uu = np.concatenate((Umax*np.ones(rhoT),
-									-Umax*np.ones(T-rhoT),
-									np.zeros(R+1)))
+	def variance(u, t):
+		"""
+		compute the variance at time t given the control signal u
+		"""
+		return k*(np.flipud(ci0_array[0:t]**2)*u[0:t]**2).sum()
 
-				return uu, xx, vv
 
-			else:
-				tau = m/b
-				vrho = np.linspace(0.5,1,1001)
-				y = (xT+v0*t_T+v0*tau*(1-np.exp((1-vrho)*t_T/tau)))*(2-np.exp(-vrho*t_T/tau)-np.exp((1-vrho)*t_T/tau))+v0*np.exp((1-vrho)*t_T/tau)*((1-vrho)*t_T+tau*(1-np.exp((1-vrho)*t_T/tau)))-v0*np.exp((1-vrho)*t_T/tau)*(vrho*t_T-tau*(1-np.exp(-vrho*t_T/tau)))
+	def vvariance(u):
+		"""
+		vectorized version of variance
+		"""
+		var = np.zeros(T+R+1)
+		for i in np.arange(T+R+1):
+			var[i] = variance(u,i)
+		return var
 
-				rho_pursuit = vrho[np.argmin(np.abs(y))]
-				rhoT_pursuit = int(np.round(T*rho_pursuit))
 
-				Umax_pursuit = b*v0*np.exp((1-rho_pursuit)*t_T/tau)/(2-np.exp((1-rho_pursuit)*t_T/tau)-np.exp(-rho_pursuit*t_T/tau))
+	def bias(u, t):
+		"""
+		compute the bias at time t given the control signal u
+		"""
+		return (((expectation(u, t)-(xT+np.array([v*t*dt,v])))**2)*np.array([1,mult])).sum()
 
-				x_pursuit = np.concatenate((Umax_pursuit/b*(time[0:rhoT_pursuit]-m/b*(1-np.exp(-b/m*time[0:rhoT_pursuit]))),
-											xT+v0*T*dt+Umax_pursuit/b*(T*dt-time[rhoT_pursuit:T]+m/b*(1-np.exp(b/m*(T*dt-time[rhoT_pursuit:T]))))+m/b*v0*(1-np.exp(b/m*(T*dt-time[rhoT_pursuit:T]))),
-											xT+v0*T*dt+v0*(time[T:(T+R+1)]-t_T)))
 
-				v_pursuit = np.concatenate((Umax_pursuit/b*(1-np.exp(-b/m*time[0:rhoT_pursuit])),
-											-Umax_pursuit/b*(1-np.exp(b/m*(T*dt-time[rhoT_pursuit:T])))+v0*np.exp(b/m*(T*dt-time[rhoT_pursuit:T])),
-											v0*np.ones(R+1)))
+	def cost(u):
+		"""
+		compute the post-movement cost given the control signal u
+		"""
+		def var1d(t):
+			return(variance(u,t))
+		var_vec = np.vectorize(var1d)
+		def bias1d(t):
+			return((bias(u,t)**2).sum())
+		bias_vec = np.vectorize(bias1d)
 
-				u_pursuit = np.concatenate((Umax_pursuit*np.ones(rhoT_pursuit),
-											-Umax_pursuit*np.ones(T-rhoT_pursuit),
-											b*v0*np.ones(R+1)))
+		return var_vec(T+1+np.arange(R)).sum() + bias_vec(T+np.arange(R+1)).sum()
 
-				return u_pursuit, x_pursuit, v_pursuit
+
+	def cost_deriv(u, i):
+		"""
+		Derivative of the cost function with respect to u_i
+		"""
+		if i < T:
+			return (2*np.transpose(ci_array[:,(T-i-1):(T+R-i)])*np.array([((expectation(u,t)-xT-np.array([v*t*dt,v]))*np.array([1,mult])).tolist() for t in (T+np.arange(R+1))])).sum() + 2*k*u[i]*(ci0_array[(T+1-i-1):(T+R-i)]**2).sum()
+		else:
+			return (2*np.transpose(ci_array[:,0:(T+R-i)])*np.array([((expectation(u,t)-xT-np.array([v*t*dt,v]))*np.array([1,mult])).tolist() for t in (i+1+np.arange(R+T-i))])).sum() + 2*k*u[i]*(ci0_array[0:(T+R-i)]**2).sum()
+
+
+	def vcost_deriv(u):
+		"""
+		vectorized version of cost_deriv
+		"""
+		deriv_cost = np.zeros(T+R+1)
+		for i in np.arange(T+R+1-1):
+			deriv_cost[i] = cost_deriv(u,i)
+		return deriv_cost
+
+
+
+
+	import pickle
+	import os
+	from os.path import isfile
+
+	if os.path.isfile('../2017_OptimalPrecision/DataRecording/'+'dt_'+str(dt)+'/'+'HW_tau='+str(tau)+'_dt='+str(dt)+'_tT='+str(t_T)+'_tR='+str(t_R)+'_k='+str(k)+'_niter='+str(n_iter)+'_xT='+str(xT[0])+'_v='+str(v)+'.pkl'):
+		import pandas as pd
+		record = pd.read_pickle('../2017_OptimalPrecision/DataRecording/'+'dt_'+str(dt)+'/'+'HW_tau='+str(tau)+'_dt='+str(dt)+'_tT='+str(t_T)+'_tR='+str(t_R)+'_k='+str(k)+'_niter='+str(n_iter)+'_xT='+str(xT[0])+'_v='+str(v)+'.pkl')
+		control = record.signal[n_iter]
+
+		control_bang1, pos_bang1, vel_bang1 = SymmetricalBangbang(tau, xT[0], 0.0000001, t_T, t_R, v)
+		control_bang1bis, pos_bang1bis, vel_bang1bis = SymmetricalBangbang(tau, xT[0], dt, t_T, t_R, v)
+
+		var_bang1 = vvariance(control_bang1bis)
+
+
+		bang_data = pd.DataFrame([{'signal':control_bang1,
+								   'position':pos_bang1,
+								   'velocity':vel_bang1,
+								   'variance':var_bang1}],
+								   index=[0])
+
+		control_bang2, pos_bang2, vel_bang2, var_bang2 = AsymmetricalBangbang(tau, xT[0], 0.00001, t_T, t_R, v)
+
+		bang_data2 = pd.DataFrame([{'signal':control_bang2,
+								   'position':pos_bang2,
+								   'velocity':vel_bang2,
+								   'variance':var_bang2}],
+								   index=[1])
+
+		bang_data = pd.concat([bang_data, bang_data2])
+
+		return control, record, bang_data
+
+	else:
+
+		if record_each>0:
+			import pandas as pd
+			record = pd.DataFrame()
 
 
 		if not (control_init is None):
 			control = control_init.copy()
 
 		else:
-			control, pos, vel = ControlInitFunction(beta, m, xT[0], dt, t_T, t_R, v)
+			control = np.zeros(T+R+1)
 
-		control[T+R] = beta*v
+
+		control_bang1, pos_bang1, vel_bang1 = SymmetricalBangbang(tau, xT[0], 0.0000001, t_T, t_R, v)
+		control_bang1bis, pos_bang1bis, vel_bang1bis = SymmetricalBangbang(tau, xT[0], dt, t_T, t_R, v)
+
+		var_bang1 = vvariance(control_bang1bis)
+
+
+		bang_data = pd.DataFrame([{'signal':control_bang1,
+								   'position':pos_bang1,
+								   'velocity':vel_bang1,
+								   'variance':var_bang1}],
+								   index=[0])
+
+		control_bang2, pos_bang2, vel_bang2, var_bang2 = AsymmetricalBangbang(tau, xT[0], 0.00001, t_T, t_R, v)
+
+		bang_data2 = pd.DataFrame([{'signal':control_bang2,
+								   'position':pos_bang2,
+								   'velocity':vel_bang2,
+								   'variance':var_bang2}],
+								   index=[1])
+
+		bang_data = pd.concat([bang_data, bang_data2])
+
+
+
+		control[T+R] = 1/tau*v
+
 
 		cost_iter = np.zeros(0)
 		posT_iter = np.zeros(0)
@@ -364,8 +507,8 @@ def control_learning(control_init=None, m=1., beta=100., k=0.0001,
 					posT_rec = posT_iter.copy()
 					posT_iter = np.zeros(0)
 
-					if i_iter == 0:
-						control_not_used, pos_rec, vel_rec = ControlInitFunction(beta, m, xT[0], 0.000001, t_T, t_R, v)
+					#if i_iter == 0:
+					#	control_not_used, pos_rec, vel_rec = ControlInitFunction(tau, xT[0], 0.000001, t_T, t_R, v)
 
 
 					record_one = pd.DataFrame([{'signal':control_rec,
@@ -381,8 +524,8 @@ def control_learning(control_init=None, m=1., beta=100., k=0.0001,
 									 'position':vexpectation(control)[:, 0],
 									 'velocity':vexpectation(control)[:, 1],
 									 'variance':vvariance(control),
-									 'cost':np.array([cost(control)]),
-									 'positionT':np.array([expectation(control,T)[0]])}],
+									 'cost':cost_iter,
+									 'positionT':posT_iter}],
 									 index=[n_iter])
 
 		record = pd.concat([record, record_last])
@@ -390,9 +533,9 @@ def control_learning(control_init=None, m=1., beta=100., k=0.0001,
 # '/home/baptiste/Documents/2017_OptimalPrecision' = '.'
 # import os
 # fname = os.path.join('DataRecording', 'machin', 'truc') 
-		record.to_pickle('../2017_OptimalPrecision/DataRecording/'+'dt_'+str(dt)+'/'+'HW_beta'+str(beta)+'_m'+str(m)+'_dt'+str(dt)+'_k'+str(k)+'_niter'+str(n_iter)+'v_'+str(v)+'.pkl')
+		record.to_pickle('../2017_OptimalPrecision/DataRecording/'+'dt_'+str(dt)+'/'+'HW_tau='+str(tau)+'_dt='+str(dt)+'_tT='+str(t_T)+'_tR='+str(t_R)+'_k='+str(k)+'_niter='+str(n_iter)+'_xT='+str(xT[0])+'_v='+str(v)+'.pkl')
 
 		if record_each==0:
-			return control
+			return control, bang_data
 		else:
-			return control, record
+			return control, record, bang_data
