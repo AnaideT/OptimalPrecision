@@ -142,14 +142,14 @@ def control_learning(control_init=None, tau = 0.013, k=0.0001,
 	R = int(t_R/dt)
 	time = np.linspace(0, t_T+t_R, R+T+1)
 	time_ms = time*1000
-	mult = 1.
+	mult = 0.01
 
 
 
 
-	def ControlInitFunction(tau, xT, dt, t_T, t_R, v0):
+	def SymmetricalBangbang(tau, xT, dt, t_T, t_R, v0):
 		"""
-		Returns the bangbang solution that will be used as control_init
+		Returns the symmetrical (U+ = - U-) bangbang solution
 		"""
 		T = int(t_T/dt)
 		R = int(t_R/dt)
@@ -197,6 +197,99 @@ def control_learning(control_init=None, tau = 0.013, k=0.0001,
 										1/tau*v0*np.ones(R+1)))
 
 			return u_pursuit, x_pursuit, v_pursuit
+
+
+
+	def AsymmetricalBangbang(tau, xT, dt2, t_T, t_R, v0):
+		"""
+		Returns the asymmetrical (U+ =/= - U-) bangbang solution
+		"""
+		T2 = int(t_T/dt2)
+		R2 = int(t_R/dt2)
+		time = np.linspace(0, t_T+t_R, R2+T2+1)
+
+		A2 = np.array([[1, dt2], [0, 1-dt2/tau]])
+		B2 = np.array([0., dt2])
+
+		def A2_pow(A):
+			"""
+			compute the array of A^i of shape (T+R+1, 2, 2)
+			"""
+			A2_pow_array = np.zeros((T2+R2+1, 2, 2))
+			for i in np.arange(T2+R2+1):
+				A2_pow_array[i, :, :] = power(A, i)
+			return A2_pow_array
+
+		A2_pow_array = A2_pow(A2)
+
+		ci0_array2 = np.zeros(T2+R2+1)
+		ci1_array2 = np.zeros(T2+R2+1)
+
+		for i in np.arange(T2+R2+1):
+			ci0_array2[i] = (A2_pow_array[i, :, :].dot(B2))[0]
+			ci1_array2[i] = (A2_pow_array[i, :, :].dot(B2))[1]
+
+		ci_array2 = np.array([ci0_array2, ci1_array2])
+
+
+		def expectation2(u, t):
+			"""
+			compute the expectation at time t given the control signal u
+
+			array of shape (2, 1)
+			"""
+			if t == 0:
+				return x0
+			else:
+				return (ci_array2[:,0:t]*np.flipud(u[0:t])).sum(axis = 1)
+
+		def variance2(u, t):
+			"""
+			compute the variance at time t given the control signal u
+			"""
+			return k*(np.flipud(ci0_array2[0:t]**2)*u[0:t]**2).sum()
+
+
+		n = 100 # number of rho's values
+		rho = np.linspace(0.5,0.999,n) # rho's tested values
+
+
+		Umoins = 1/tau*((xT+v0*(t_T+tau))*(1-np.exp(-rho*t_T/tau))-v0*rho*t_T*np.exp((1-rho)*t_T/tau))/(t_T-(1-rho)*t_T*np.exp(-rho*t_T/tau)-rho*t_T*np.exp((1-rho)*t_T/tau))
+
+		Uplus = (1-np.exp((1-rho)*t_T/tau))/(1-np.exp(-rho*t_T/tau))*Umoins+1/tau*v0*np.exp((1-rho)*t_T/tau)/(1-np.exp(-rho*t_T/tau))
+
+		u = np.zeros((n-1, T2+R2+1))
+
+		for i in np.arange(n-1):
+			rhoT = np.round(T2*rho[i])
+			u[i,:] = np.concatenate((Uplus[i]*np.ones(rhoT), Umoins[i]*np.ones(T2-rhoT), 1/tau*v0*np.ones(R2+1)))
+
+
+		position = np.zeros((n-1, T2+R2+1))
+		velocity = np.zeros((n-1, T2+R2+1))
+
+		for i in np.arange(n-1):
+			for j in np.arange(T2+R2+1):
+				mean = expectation2(u[i,:], j)
+				position[i,j] = mean[0]
+				velocity[i,j] = mean[1]
+
+
+		variancev = np.zeros((n-1, T2+R2+1))
+
+		for i in np.arange(n-1):
+			for j in np.arange(T2+R2+1):
+				variancev[i,j] = variance2(u[i,:], j)
+
+
+		somme = np.zeros(n-1)
+		for i in np.arange(n-1):
+			for j in T2+np.arange(R2+1):
+				somme[i] += variancev[i,j]
+
+		ind_best = np.argmin(somme)
+
+		return u[ind_best, :], position[ind_best, :], velocity[ind_best, :], variancev[ind_best, :]*dt/dt2
 
 
 	def power(A, n): 
@@ -329,17 +422,27 @@ def control_learning(control_init=None, tau = 0.013, k=0.0001,
 		record = pd.read_pickle('../2017_OptimalPrecision/DataRecording/'+'dt_'+str(dt)+'/'+'HW_tau='+str(tau)+'_dt='+str(dt)+'_tT='+str(t_T)+'_tR='+str(t_R)+'_k='+str(k)+'_niter='+str(n_iter)+'_xT='+str(xT[0])+'_v='+str(v)+'.pkl')
 		control = record.signal[n_iter]
 
-		control_bang, pos_bang, vel_bang = ControlInitFunction(tau, xT[0], 0.0000001, t_T, t_R, v)
-		control_bang2, pos_bang2, vel_bang2 = ControlInitFunction(tau, xT[0], dt, t_T, t_R, v)
+		control_bang1, pos_bang1, vel_bang1 = SymmetricalBangbang(tau, xT[0], 0.0000001, t_T, t_R, v)
+		control_bang1bis, pos_bang1bis, vel_bang1bis = SymmetricalBangbang(tau, xT[0], dt, t_T, t_R, v)
 
-		var_bang = vvariance(control_bang2)
+		var_bang1 = vvariance(control_bang1bis)
 
 
-		bang_data = pd.DataFrame([{'signal':control_bang,
-								   'position':pos_bang,
-								   'velocity':vel_bang,
-								   'variance':var_bang}],
-								   index=["bang"])
+		bang_data = pd.DataFrame([{'signal':control_bang1,
+								   'position':pos_bang1,
+								   'velocity':vel_bang1,
+								   'variance':var_bang1}],
+								   index=[0])
+
+		control_bang2, pos_bang2, vel_bang2, var_bang2 = AsymmetricalBangbang(tau, xT[0], 0.00001, t_T, t_R, v)
+
+		bang_data2 = pd.DataFrame([{'signal':control_bang2,
+								   'position':pos_bang2,
+								   'velocity':vel_bang2,
+								   'variance':var_bang2}],
+								   index=[1])
+
+		bang_data = pd.concat([bang_data, bang_data2])
 
 		return control, record, bang_data
 
@@ -357,17 +460,27 @@ def control_learning(control_init=None, tau = 0.013, k=0.0001,
 			control = np.zeros(T+R+1)
 
 
-		control_bang, pos_bang, vel_bang = ControlInitFunction(tau, xT[0], 0.0000001, t_T, t_R, v)
-		control_bang2, pos_bang2, vel_bang2 = ControlInitFunction(tau, xT[0], dt, t_T, t_R, v)
+		control_bang1, pos_bang1, vel_bang1 = SymmetricalBangbang(tau, xT[0], 0.0000001, t_T, t_R, v)
+		control_bang1bis, pos_bang1bis, vel_bang1bis = SymmetricalBangbang(tau, xT[0], dt, t_T, t_R, v)
 
-		var_bang = vvariance(control_bang2)
+		var_bang1 = vvariance(control_bang1bis)
 
 
-		bang_data = pd.DataFrame([{'signal':control_bang,
-								   'position':pos_bang,
-								   'velocity':vel_bang,
-								   'variance':var_bang}],
-								   index=["bang"])
+		bang_data = pd.DataFrame([{'signal':control_bang1,
+								   'position':pos_bang1,
+								   'velocity':vel_bang1,
+								   'variance':var_bang1}],
+								   index=[0])
+
+		control_bang2, pos_bang2, vel_bang2, var_bang2 = AsymmetricalBangbang(tau, xT[0], 0.00001, t_T, t_R, v)
+
+		bang_data2 = pd.DataFrame([{'signal':control_bang2,
+								   'position':pos_bang2,
+								   'velocity':vel_bang2,
+								   'variance':var_bang2}],
+								   index=[1])
+
+		bang_data = pd.concat([bang_data, bang_data2])
 
 
 
