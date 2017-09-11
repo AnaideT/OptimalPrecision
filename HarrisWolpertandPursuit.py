@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*
 
 import numpy as np
+from decimal import Decimal
+
 
 # Harris and Wolpert 1998 article's review
 class MinimumVarianceControl:
@@ -49,9 +51,9 @@ class MinimumVarianceControl:
 	"""
 
 	def __init__(self, control_init = None, tau = 0.013, k=0.0001,
-				 dt=0.005, t_T=0.05, t_R=0.05, x0=np.array([0,0]), xT=np.array([10,0]), v=0.,
-				 n_iter=2000, eta=0.0017,
-				 record_each=200):
+				 dt=0.001, t_T=None, t_R=None, x0=np.array([0,0]), xT=np.array([10,0]), v=0.,
+				 n_iter=2000, eta=5000,
+				 record_each=100):
 		self.control_init = control_init
 		self.tau = tau
 		self.k = k
@@ -89,9 +91,9 @@ class MinimumVarianceControl:
 
 
 def control_learning(control_init=None, tau = 0.013, k=0.0001,
-					 dt=0.005, t_T=0.05, t_R=0.05, x0=np.array([0,0]), xT=np.array([10,0]), v=0.,
-					 n_iter=2000, eta=0.0017,
-					 record_each=200):
+					 dt=0.001, t_T=None, t_R=None, x0=np.array([0,0]), xT=np.array([10,0]), v=0.,
+					 n_iter=2000, eta=5000,
+					 record_each=100):
 	"""
 	Solves the optimization problem::
 		u^* = argmin_{(u_0,u_1,...,u_{T+R})} C(u)
@@ -137,6 +139,12 @@ def control_learning(control_init=None, tau = 0.013, k=0.0001,
 
 	A = np.array([[1., dt],[0., 1-dt/tau]])
 	B = np.array([0., dt])
+
+	if (t_T is None):
+		t_Tv = (0.02468 + 0.001739*np.abs(xT[0]-x0[0]))/(1-0.001739*np.abs(v))
+		t_T =  float(round(Decimal(t_Tv),3)) #.05 # saccade duration
+		t_R =  float(round(Decimal(0.15-t_T),3)) # .05 # fixing / pursuit duration
+
 
 	T = int(t_T/dt)
 	R = int(t_R/dt)
@@ -470,7 +478,7 @@ def control_learning(control_init=None, tau = 0.013, k=0.0001,
 
 		bang_data = pd.concat([bang_data, bang_data2])
 
-		return control, record, bang_data
+		return control, record, bang_data, t_T, t_R
 
 	else:
 
@@ -562,6 +570,6 @@ def control_learning(control_init=None, tau = 0.013, k=0.0001,
 		record.to_pickle('../2017_OptimalPrecision/DataRecording/'+'dt_'+str(dt)+'/'+'HW_tau='+str(tau)+'_dt='+str(dt)+'_tT='+str(t_T)+'_tR='+str(t_R)+'_k='+str(k)+'_niter='+str(n_iter)+'_xT='+str(xT[0])+'_v='+str(v)+'.pkl')
 
 		if record_each==0:
-			return control, bang_data
+			return control, bang_data, t_T, t_R
 		else:
-			return control, record, bang_data
+			return control, record, bang_data, t_T, t_R

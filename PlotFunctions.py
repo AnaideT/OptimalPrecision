@@ -162,6 +162,9 @@ def all_plots(record, bang_data, record_each, n_iter, t_T, t_R, dt, xT, v):
 	p = len(bang_data.signal[1])
 	ax.step(np.linspace(0, (t_T+t_R)*1000, p), bang_data.signal[1], lw=2, where = 'post', label="Asym. bangbang")
 	ax.plot([0,1000*(t_T+t_R)], [0,0],'r--')
+	ax.set_title(r'Control signal $u$', fontsize = 15)
+	ax.set_xlabel('Time (ms)', fontsize=14)
+	ax.set_ylabel(r'$u$', fontsize=14)
 	ax.legend(prop={'size':15})
 
 
@@ -175,6 +178,9 @@ def all_plots(record, bang_data, record_each, n_iter, t_T, t_R, dt, xT, v):
 	p = len(bang_data.position[1])
 	ax.plot(np.linspace(0, (t_T+t_R)*1000, p), bang_data.position[1], lw=2, label="Asym. bangbang")
 	ax.plot(time_ms, xT[0]+v*np.linspace(0,t_T+t_R,T+R+1), 'r--')
+	ax.set_title(r'Position $x_t$', fontsize = 15)
+	ax.set_xlabel('Time (ms)', fontsize=14)
+	ax.set_ylabel('Angle (deg)', fontsize=14)
 	ax.legend(loc='upper left',prop={'size':15})
 
 
@@ -188,6 +194,9 @@ def all_plots(record, bang_data, record_each, n_iter, t_T, t_R, dt, xT, v):
 	p = len(bang_data.velocity[1])
 	ax.plot(np.linspace(0, (t_T+t_R)*1000, p), bang_data.velocity[1], lw=2, label="Asym. bangbang")
 	ax.plot(time_ms, v*np.ones(T+R+1),'r--')
+	ax.set_title('Velocity', fontsize = 15)
+	ax.set_xlabel('Time (ms)', fontsize=14)
+	ax.set_ylabel(r'Velocity $(deg.s^{-1})$ ', fontsize=14)
 	ax.legend(prop={'size':15})
 
 
@@ -199,6 +208,9 @@ def all_plots(record, bang_data, record_each, n_iter, t_T, t_R, dt, xT, v):
 	ax.plot(time_ms, bang_data.variance[0], lw=2, label="Sym. bangbang")
 	p = len(bang_data.variance[1])
 	ax.plot(np.linspace(0, (t_T+t_R)*1000, p), bang_data.variance[1], lw=2, label="Asym. bangbang")
+	ax.set_title('Positional variance', fontsize = 15)
+	ax.set_xlabel('Time (ms)', fontsize=14)
+	ax.set_ylabel('Positional variance', fontsize=14)
 	ax.legend(loc='upper left',prop={'size':15})
 
 
