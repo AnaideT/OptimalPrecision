@@ -491,7 +491,7 @@ def control_learning(control_init=None, tau = 0.013, k=0.0001,
 			control = control_init.copy()
 
 		else:
-			control = np.zeros(T+R+1)
+			control = np.ones(T+R+1)*v/tau
 
 
 		control_bang1, pos_bang1, vel_bang1 = SymmetricalBangbang(tau, x0, xT[0], 0.0000001, t_T, t_R, v)
