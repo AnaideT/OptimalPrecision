@@ -446,17 +446,21 @@ def control_learning(control_init=None, tau = 0.013, k=0.0001,
 
 
 
-
+	# First : test if the file already exists which mean that the function has already been used for this parameters
 	import pickle
 	import os
 	from os.path import isfile
 
+	# if the file exists we use it
 	if os.path.isfile('../2017_OptimalPrecision/DataRecording/'+'dt_'+str(dt)+'/'+'HW_tau='+str(tau)+'_dt='+str(dt)+'_tT='+str(t_T)+'_tR='+str(t_R)+'_k='+str(k)+'_niter='+str(n_iter)+'_xT='+str(xT[0])+'_v='+str(v)+'.pkl'):
 		import pandas as pd
 		record = pd.read_pickle('../2017_OptimalPrecision/DataRecording/'+'dt_'+str(dt)+'/'+'HW_tau='+str(tau)+'_dt='+str(dt)+'_tT='+str(t_T)+'_tR='+str(t_R)+'_k='+str(k)+'_niter='+str(n_iter)+'_xT='+str(xT[0])+'_v='+str(v)+'.pkl')
 		control = record.signal[n_iter]
 
+		# We compute the sym bangbang to have nice plots (that's why the time step is reduced)
 		control_bang1, pos_bang1, vel_bang1 = SymmetricalBangbang(tau, x0, xT[0], 0.0000001, t_T, t_R, v)
+
+		# useful to compute the variance
 		control_bang1bis, pos_bang1bis, vel_bang1bis = SymmetricalBangbang(tau, x0, xT[0], dt, t_T, t_R, v)
 
 		var_bang1 = vvariance(control_bang1bis)
@@ -468,6 +472,7 @@ def control_learning(control_init=None, tau = 0.013, k=0.0001,
 								   'variance':var_bang1}],
 								   index=[0])
 
+		# We compute the asym bangbang to have nice plots (that's why the time step is reduced)
 		control_bang2, pos_bang2, vel_bang2, var_bang2 = AsymmetricalBangbang(tau, x0, xT[0], 0.00001, t_T, t_R, v)
 
 		bang_data2 = pd.DataFrame([{'signal':control_bang2,
@@ -480,21 +485,25 @@ def control_learning(control_init=None, tau = 0.013, k=0.0001,
 
 		return control, record, bang_data, t_T, t_R
 
+	# if not, we start from zero
 	else:
 
 		if record_each>0:
 			import pandas as pd
 			record = pd.DataFrame()
 
-
+		# if the initial control is given by the inputs, we use it
 		if not (control_init is None):
 			control = control_init.copy()
 
+		# if not, we start from a constant signal (faster than starting from a bangbang)
 		else:
 			control = np.ones(T+R+1)*v/tau
 
-
+		# We compute the sym bangbang to have nice plots (that's why the time step is reduced)
 		control_bang1, pos_bang1, vel_bang1 = SymmetricalBangbang(tau, x0, xT[0], 0.0000001, t_T, t_R, v)
+
+		# useful to compute the variance
 		control_bang1bis, pos_bang1bis, vel_bang1bis = SymmetricalBangbang(tau, x0, xT[0], dt, t_T, t_R, v)
 
 		var_bang1 = vvariance(control_bang1bis)
@@ -506,6 +515,7 @@ def control_learning(control_init=None, tau = 0.013, k=0.0001,
 								   'variance':var_bang1}],
 								   index=[0])
 
+		# We compute the asym bangbang to have nice plots (that's why the time step is reduced)
 		control_bang2, pos_bang2, vel_bang2, var_bang2 = AsymmetricalBangbang(tau, x0, xT[0], 0.00001, t_T, t_R, v)
 
 		bang_data2 = pd.DataFrame([{'signal':control_bang2,
@@ -525,6 +535,8 @@ def control_learning(control_init=None, tau = 0.013, k=0.0001,
 		posT_iter = np.zeros(0)
 
 		for i_iter in np.arange(n_iter):
+
+			# Gradient descent
 			control_old = control.copy()
 			control[0:T+R] = control_old[0:T+R] - eta*np.array([cost_deriv(control_old, i) for i in np.arange(T+R)])
 			cost_iter = np.concatenate((cost_iter, np.array([cost(control_old)])))
@@ -540,9 +552,6 @@ def control_learning(control_init=None, tau = 0.013, k=0.0001,
 					cost_iter = np.zeros(0)
 					posT_rec = posT_iter.copy()
 					posT_iter = np.zeros(0)
-
-					#if i_iter == 0:
-					#	control_not_used, pos_rec, vel_rec = ControlInitFunction(tau, xT[0], 0.000001, t_T, t_R, v)
 
 
 					record_one = pd.DataFrame([{'signal':control_rec,

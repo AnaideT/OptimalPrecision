@@ -3,6 +3,9 @@ import numpy as np
 
 
 def plot_signal(record_signal, record_each, n_iter, t_T, t_R, dt):
+	"""
+	show the evolution of the signal during the gradient descent
+	"""
 	fig_width = 5
 	fig, ax = plt.subplots(1, 1, figsize=(fig_width, fig_width/1.618))
 	N_show = n_iter//record_each+1
@@ -29,6 +32,9 @@ def plot_signal(record_signal, record_each, n_iter, t_T, t_R, dt):
 
 
 def plot_position(record_position, record_each, n_iter, t_T, t_R, dt):
+	"""
+	show the evolution of the position during the gradient descent
+	"""
 	fig_width = 5
 	fig, ax = plt.subplots(1, 1, figsize=(fig_width, fig_width/1.618))
 	N_show = n_iter//record_each+1
@@ -57,6 +63,9 @@ def plot_position(record_position, record_each, n_iter, t_T, t_R, dt):
 
 
 def plot_velocity(record_velocity, record_each, n_iter, t_T, t_R, dt):
+	"""
+	show the evolution of the velocity during the gradient descent
+	"""
 	fig_width = 5
 	fig, ax = plt.subplots(1, 1, figsize=(fig_width, fig_width/1.618))
 	N_show = n_iter//record_each+1
@@ -85,6 +94,9 @@ def plot_velocity(record_velocity, record_each, n_iter, t_T, t_R, dt):
 
 
 def plot_variance(record_variance, record_each, n_iter, t_T, t_R, dt):
+	"""
+	show the evolution of the variance during the gradient descent
+	"""
 	fig_width = 5
 	fig, ax = plt.subplots(1, 1, figsize=(fig_width, fig_width/1.618))
 	N_show = n_iter//record_each+1
@@ -109,6 +121,9 @@ def plot_variance(record_variance, record_each, n_iter, t_T, t_R, dt):
 
 
 def plot_cost(record_cost, record_each, n_iter):
+	"""
+	show the evolution of the cost during the gradient descent
+	"""
 	fig_width = 5
 	fig, ax = plt.subplots(1, 1, figsize=(fig_width, fig_width/1.618))
 	N_show = n_iter//record_each+1
@@ -124,6 +139,9 @@ def plot_cost(record_cost, record_each, n_iter):
 
 
 def plot_posT(record_posT, record_each, n_iter):
+	"""
+	show the evolution of the position at time T during the gradient descent
+	"""
 	fig_width = 5
 	fig, ax = plt.subplots(1, 1, figsize=(fig_width, fig_width/1.618))
 	N_show = n_iter//record_each+1
@@ -139,6 +157,9 @@ def plot_posT(record_posT, record_each, n_iter):
 
 
 def all_plots(record, bang_data, record_each, n_iter, t_T, t_R, dt, xT, v):
+	"""
+	show all the plots
+	"""
 	record_signal = record.signal
 	record_position = record.position
 	record_velocity = record.velocity
@@ -149,6 +170,7 @@ def all_plots(record, bang_data, record_each, n_iter, t_T, t_R, dt, xT, v):
 
 	plot_signal(record_signal, record_each, n_iter, t_T, t_R, dt)
 
+	# Comparison between bangbang and minimum-variance signals
 	T = int(np.round(t_T/dt))
 	R = int(np.round(t_R/dt))
 	time = np.linspace(0, t_T+t_R, R+T+1)
@@ -171,6 +193,7 @@ def all_plots(record, bang_data, record_each, n_iter, t_T, t_R, dt, xT, v):
 
 	plot_position(record_position, record_each, n_iter, t_T, t_R, dt)
 
+	# Comparison between bangbang and minimum-variance positions
 	fig_width = 5
 	fig, ax = plt.subplots(1, 1, figsize=(fig_width, fig_width/1.618))
 	ax.plot(time_ms, record_position[n_iter], lw=2, label="Minimum-variance")
@@ -187,6 +210,7 @@ def all_plots(record, bang_data, record_each, n_iter, t_T, t_R, dt, xT, v):
 
 	plot_velocity(record_velocity, record_each, n_iter, t_T, t_R, dt)
 
+	# Comparison between bangbang and minimum-variance velocities
 	fig_width = 5
 	fig, ax = plt.subplots(1, 1, figsize=(fig_width, fig_width/1.618))
 	ax.plot(time_ms, record_velocity[n_iter], lw=2, label="Minimum-variance")
@@ -203,6 +227,7 @@ def all_plots(record, bang_data, record_each, n_iter, t_T, t_R, dt, xT, v):
 
 	plot_variance(record_variance, record_each, n_iter, t_T, t_R, dt)
 
+	# Comparison between bangbang and minimum-variance variances
 	fig_width = 5
 	fig, ax = plt.subplots(1, 1, figsize=(fig_width, fig_width/1.618))
 	ax.plot(time_ms, record_variance[n_iter], lw=1, label="Minimum-variance")
