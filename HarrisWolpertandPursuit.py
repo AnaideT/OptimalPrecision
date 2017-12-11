@@ -91,7 +91,8 @@ class MinimumVarianceControl:
 
 
 def control_learning(control_init=None, tau = 0.013, k=0.0001,
-                     dt=0.001, t_T=None, t_R=None, x0=np.array([0,0]), xT=np.array([10,0]), v=0.,
+                     dt=0.001, t_T=None, t_R=None, x0=np.array([0,0]),
+                     xT=np.array([10,0]), v=0.,
                      n_iter=2000, eta=5000,
                      record_each=100):
     """
@@ -121,7 +122,7 @@ def control_learning(control_init=None, tau = 0.013, k=0.0001,
     xT : array of shape (2, 1)
         values at time T of both position and velocity
     v : float,
-    velocity of the target (deg/s)
+        velocity of the target (deg/s)
     n_iter : int,
         total number of iterations to perform
     eta : float,
@@ -150,7 +151,6 @@ def control_learning(control_init=None, tau = 0.013, k=0.0001,
     time = np.linspace(0, t_T+t_R, R+T+1)
     time_ms = time*1000
     mult = 0.01
-
 
 
 
@@ -345,6 +345,7 @@ def control_learning(control_init=None, tau = 0.013, k=0.0001,
         compute the array of A^i of shape (T+R+1, 2, 2)
         """
         A_pow_array = np.zeros((T+R+1, 2, 2))
+        
         for i in np.arange(T+R+1):
             A_pow_array[i, :, :] = power(A, i)
         return A_pow_array
