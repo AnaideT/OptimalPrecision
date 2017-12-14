@@ -155,16 +155,18 @@ def plot_posT(record_posT, record_each, n_iter):
     ax.set_ylabel('Angle (deg)', fontsize=12)
 
 
-def all_plots(record, bang_data, record_each, n_iter, t_T, t_R, dt, xT, v):
+#def all_plots(record, bang_data, record_each, n_iter, t_T, t_R, dt, xT, v):
+def all_plots(bang_data, record_each, n_iter, t_T, t_R, dt, xT, v):
+
     """
     show all the plots
     """
-    record_signal = record.signal
-    record_position = record.position
-    record_velocity = record.velocity
-    record_variance = record.variance
-    record_cost = record.cost
-    record_posT = record.positionT
+    #record_signal = record.signal
+    #record_position = record.position
+    #record_velocity = record.velocity
+    #record_variance = record.variance
+    #record_cost = record.cost
+    #record_posT = record.positionT
 
 
     plot_signal(record_signal, record_each, n_iter, t_T, t_R, dt)
@@ -175,6 +177,7 @@ def all_plots(record, bang_data, record_each, n_iter, t_T, t_R, dt, xT, v):
     time = np.linspace(0, t_T+t_R, R+T+1)
     time_ms = time*1000
 
+    
     fig_width = 5
     fig, ax = plt.subplots(1, 1, figsize=(fig_width, fig_width/1.618))
     ax.plot(time_ms, record_signal[n_iter], lw=2, label="Minimum-variance")

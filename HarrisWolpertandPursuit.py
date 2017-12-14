@@ -50,10 +50,20 @@ class MinimumVarianceControl:
 
     """
 
-    def __init__(self, control_init = None, tau = 0.013, k=0.0001,
-                 dt=0.001, t_T=None, t_R=None, x0=np.array([0,0]), xT=np.array([10,0]), v=0.,
-                 n_iter=2000, eta=5000,
+    def __init__(self,
+                 control_init = None,
+                 tau = 0.013,
+                 k=0.0001,
+                 dt=0.001,
+                 t_T=None,
+                 t_R=None,
+                 x0=np.array([0,0]),
+                 xT=np.array([10,0]),
+                 v=0.,
+                 n_iter=2000,
+                 eta=5000,
                  record_each=100):
+        
         self.control_init = control_init
         self.tau = tau
         self.k = k
@@ -87,8 +97,20 @@ class MinimumVarianceControl:
             self.control = return_fn
         else:
             self.control, self.record = return_fn
+         
+        
+def fact(n): 
+    """The factorial function
+    Returns n!, that is n x (n-1) x (n-2) x ... x 1
+    Recursive implementation
+    """
+    if n == 0:
+        return 1
+    else:
+        return(n*fact(n-1))
 
 
+        
 
 def control_learning(control_init=None, tau = 0.013, k=0.0001,
                      dt=0.001, t_T=None, t_R=None, x0=np.array([0,0]),
@@ -347,7 +369,8 @@ def control_learning(control_init=None, tau = 0.013, k=0.0001,
         A_pow_array = np.zeros((T+R+1, 2, 2))
         
         for i in np.arange(T+R+1):
-            A_pow_array[i, :, :] = power(A, i)
+            #A_pow_array[i, :, :] = power(A, i)
+            A_pow_array[i] = power(A, i)
         return A_pow_array
 
     A_pow_array = A_pow(A)
@@ -363,12 +386,12 @@ def control_learning(control_init=None, tau = 0.013, k=0.0001,
 
 
     def pow_fast(n):
-        return A_pow_array[n,:,:]
+        #return A_pow_array[n,:,:]
+        return A_pow_array[n]
 
     def expectation(u, t):
         """
         compute the expectation at time t given the control signal u
-
         array of shape (2, 1)
         """
         if t == 0:
@@ -445,7 +468,15 @@ def control_learning(control_init=None, tau = 0.013, k=0.0001,
         return deriv_cost
 
 
-
+    
+    
+    
+    
+    
+    
+### retrieve the files (for the cells were long to run in GeneralCoordinates. pynb) ### 
+    
+    
     # First : test if the file already exists which mean that the function has already been used for this parameters
     import pickle
     import os
