@@ -186,7 +186,7 @@ def control_learning(control_init=None, tau = 0.013, k=0.0001,
 
         if v0==0.:
             vrho = np.linspace(0.5,1,1000001)
-            y = (xT-x0[0]-x0[1]*vrho*t_T)*(2-np.exp(-vrho*t_T/tau)-np.exp((1-vrho)*t_T/tau))+x0[1]*((2*vrho-1)*t_T-tau*(2-np.exp(-vrho*t_T/tau)-np.exp((1-vrho)*t_T/tau)))
+            y = (xT-x0[0]-x0[1]*vrho*t_T)*(2-np.exp(-vrho*t_T/tau) - np.exp((1-vrho)*t_T/tau)) + x0[1]*((2*vrho-1)*t_T-tau*(2-np.exp(-vrho*t_T/tau)-np.exp((1-vrho)*t_T/tau)))
 
             rho = vrho[np.argmin(np.abs(y))]
             rhoT = int(np.round(T*rho))
@@ -209,7 +209,7 @@ def control_learning(control_init=None, tau = 0.013, k=0.0001,
 
         else:
             vrho = np.linspace(0.5,1,1000001)
-            y = (xT+v0*t_T-x0[0]-x0[1]*vrho*t_T+v0*tau*(1-np.exp((1-vrho)*t_T/tau)))*(2-np.exp(-vrho*t_T/tau)-np.exp((1-vrho)*t_T/tau))-(v0*np.exp((1-vrho)*t_T/tau)-x0[1])*((2*vrho-1)*t_T-tau*(2-np.exp(-vrho*t_T/tau)-np.exp((1-vrho)*t_T/tau)))
+            y = (xT+v0*t_T-x0[0]-x0[1]*vrho*t_T + v0*tau*(1-np.exp((1-vrho)*t_T/tau))) * (2-np.exp(-vrho*t_T/tau) - np.exp((1-vrho)*t_T/tau)) - (v0*np.exp((1-vrho)*t_T/tau)-x0[1]) * ((2*vrho-1)*t_T-tau*(2-np.exp(-vrho*t_T/tau)-np.exp((1-vrho)*t_T/tau)))
 
             rho_pursuit = vrho[np.argmin(np.abs(y))]
             rhoT_pursuit = int(np.round(T*rho_pursuit))
@@ -289,7 +289,7 @@ def control_learning(control_init=None, tau = 0.013, k=0.0001,
         rho = np.linspace(0.5,0.999,n) # rho's tested values
 
 
-        Umoins = 1/tau*((xT-x0[0]+v0*(t_T+tau)-x0[1]*(rho*t_T+tau))*(1-np.exp(-rho*t_T/tau))-rho*t_T*(v0*np.exp((1-rho)*t_T/tau)-x0[1]))/(t_T-(1-rho)*t_T*np.exp(-rho*t_T/tau)-rho*t_T*np.exp((1-rho)*t_T/tau))
+        Umoins = 1/tau*((xT-x0[0]+v0*(t_T+tau)-x0[1]*(rho*t_T+tau)) * (1-np.exp(-rho*t_T/tau)) - rho*t_T*(v0*np.exp((1-rho)*t_T/tau) - x0[1]))/(t_T-(1-rho)*t_T*np.exp(-rho*t_T/tau)-rho*t_T*np.exp((1-rho)*t_T/tau))
 
         Uplus = (1-np.exp((1-rho)*t_T/tau))/(1-np.exp(-rho*t_T/tau))*Umoins+1/tau*(v0*np.exp((1-rho)*t_T/tau)-x0[1])/(1-np.exp(-rho*t_T/tau))
 
@@ -325,9 +325,9 @@ def control_learning(control_init=None, tau = 0.013, k=0.0001,
         ind_best = np.argmin(somme)
         rho = rho[ind_best]
 
-        Umoins = 1/tau*((xT-x0[0]+v0*(t_T+tau)-x0[1]*(rho*t_T+tau))*(1-np.exp(-rho*t_T/tau))-rho*t_T*(v0*np.exp((1-rho)*t_T/tau)-x0[1]))/(t_T-(1-rho)*t_T*np.exp(-rho*t_T/tau)-rho*t_T*np.exp((1-rho)*t_T/tau))
+        Umoins = 1/tau*((xT-x0[0]+v0*(t_T+tau)-x0[1]*(rho*t_T+tau)) * (1-np.exp(-rho*t_T/tau)) - rho*t_T*(v0*np.exp((1-rho)*t_T/tau) - x0[1])) / (t_T-(1-rho)*t_T*np.exp(-rho*t_T/tau)-rho*t_T*np.exp((1-rho)*t_T/tau))
 
-        Uplus = (1-np.exp((1-rho)*t_T/tau))/(1-np.exp(-rho*t_T/tau))*Umoins+1/tau*(v0*np.exp((1-rho)*t_T/tau)-x0[1])/(1-np.exp(-rho*t_T/tau))
+        Uplus = (1-np.exp((1-rho)*t_T/tau)) / (1-np.exp(-rho*t_T/tau)) * Umoins+1/tau * (v0*np.exp((1-rho)*t_T/tau)-x0[1]) / (1-np.exp(-rho*t_T/tau))
 
         rhoT = int(T2*rho)
 
