@@ -74,9 +74,7 @@ class MinimumVarianceControl:
                  v0=20,
                  n_iter=2000,
                  eta=5000,
-                 record_each=100,
-                 
-                 fact):
+                 record_each=100):
         
         self.control_init = control_init
         self.tau = tau
@@ -101,7 +99,7 @@ class MinimumVarianceControl:
             return 1
         else:
             return(n*self.fact(n-1))
-        return fact(self, n)
+        #return fact(self, n)
         
         
     def fit(self):
@@ -115,7 +113,7 @@ class MinimumVarianceControl:
             Returns the instance itself.
         """
 
-        return_fn = control_learning(self.control_init,
+        return_fn = self.control_learning(self.control_init,
                                      self.tau,
                                      self.k,
                                      self.dt,
@@ -133,7 +131,6 @@ class MinimumVarianceControl:
         else:
             self.control, self.record = return_fn
          
-        #return fit(self.fit)
    
 
     
