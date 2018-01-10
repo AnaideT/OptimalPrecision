@@ -6,6 +6,78 @@ from decimal import Decimal
 
 # Harris and Wolpert 1998 article's review
 
+# Creation of low-level functions used for mathematical purpose to obtain the formulas of the curves
+
+# factorial
+def fact(n): 
+    """The factorial function
+    Returns n!, that is n x (n-1) x (n-2) x ... x 1
+    Recursive implementation
+    """
+    if n == 0:
+        return 1
+    else:
+        return(n*self.fact(n-1))
+    #return fact(self, n)
+
+# power
+def power(A, n): 
+    """
+    renvoie A puissance n où A est une matrice carrée
+    """
+    if n == 0:
+        return(np.eye(int(np.sqrt(np.size(A)))))
+    elif n == 1:
+        return A
+    else:
+        if n % 2 == 0:
+            A_half = power(A, n//2)
+            return(A_half.dot(A_half)) 
+        else:
+            A_half = power(A, (n-1)//2)
+            return(A.dot(A_half.dot(A_half)))
+
+        
+def A_pow(A):
+    """
+    compute the array of A^i of shape (T+R+1, 2, 2)
+    """
+    A_pow_array = np.zeros((T+R+1, 2, 2))
+
+    for i in np.arange(T+R+1):
+        #A_pow_array[i, :, :] = power(A, i)
+        A_pow_array[i] = self.power(A, i)
+    return A_pow_array
+
+    A_pow_array = A_pow(A)
+
+    ci0_array = np.zeros(T+R+1)
+    ci1_array = np.zeros(T+R+1)
+
+    for i in np.arange(T+R+1):
+        ci0_array[i] = (A_pow_array[i, :, :].dot(B))[0]
+        ci1_array[i] = (A_pow_array[i, :, :].dot(B))[1]
+
+    ci_array = np.array([ci0_array,ci1_array])
+
+
+def pow_fast(n):
+    #return A_pow_array[n,:,:]
+    return A_pow_array[n]     
+
+
+def expectation(u, t):
+    """
+    compute the expectation at time t given the control signal u
+    array of shape (2, 1)
+    """
+    if t == 0:
+        return x0
+    else:
+        return pow_fast(t).dot(x0)+(ci_array[:,0:t]*np.flipud(u[0:t])).sum(axis = 1)
+
+
+
 
 
 # Creating the class object MinimumVarianceControl to list all the variables and functions needed in the notebooks
@@ -88,66 +160,53 @@ class MinimumVarianceControl:
         self.n_iter = n_iter
         self.eta = eta
         self.record_each = record_each
-        
 
-    def fact(self, n): 
-        """The factorial function
-        Returns n!, that is n x (n-1) x (n-2) x ... x 1
-        Recursive implementation
-        """
-        if n == 0:
-            return 1
-        else:
-            return(n*self.fact(n-1))
-        #return fact(self, n)
-        
-        
-    def fit(self):
-        """Fit the model from self.
-        Parameters
-        ----------
 
-        Returns
-        -------
-        self : object
-            Returns the instance itself.
-        """
+#    def fit(self):
+#        """Fit the model from self.
+#        Parameters
+#        ----------
 
-        return_fn = self.control_learning(self.control_init,
-                                     self.tau,
-                                     self.k,
-                                     self.dt,
-                                     self.t_T,
-                                     self.t_R,
-                                     self.x0,
-                                     self.xT,
-                                     self.v,
-                                     self.n_iter,
-                                     self.eta,
-                                     self.record_each)
+#        Returns
+#        -------
+#        self : object
+#            Returns the instance itself.
+#        """
 
-        if self.record_each==0:
-            self.control = return_fn
-        else:
-            self.control, self.record = return_fn
+#        return_fn = self.control_learning(self.control_init,
+#                                     self.tau,
+#                                     self.k,
+#                                     self.dt,
+#                                     self.t_T,
+#                                     self.t_R,
+#                                     self.x0,
+#                                     self.xT,
+#                                     self.v,
+#                                     self.n_iter,
+#                                     self.eta,
+#                                     self.record_each)
+
+#        if self.record_each==0:
+#            self.control = return_fn
+#        else:
+#            self.control, self.record = return_fn
          
-   
-
-    
     
 
-    def control_learning(self, control_init=None,
-        tau = 0.013,
-        k=0.0001,
-        dt=0.001,
-        t_T=None,
-        t_R=None,
-        x0=np.array([0,0]),
-        xT=np.array([10,0]),
-        v=0.,
-        n_iter=2000,
-        eta=5000,
-        record_each=100):
+#    def control_learning(self, control_init=None,
+#        tau = 0.013,
+#        k=0.0001,
+#        dt=0.001,
+#        t_T=None,
+#        t_R=None,
+#        x0=np.array([0,0]),
+#        xT=np.array([10,0]),
+#        v=0.,
+#        n_iter=2000,
+#        eta=5000,
+#        record_each=100):
+
+    def control_learning(self):
         """
         Solves the optimization problem::
             u^* = argmin_{(u_0,u_1,...,u_{T+R})} C(u)
@@ -162,10 +221,10 @@ class MinimumVarianceControl:
         -------
         control : array of shape ((t_T+t_R)/dt+1),
             the solutions to the control learning problem
-        """
+        """    
+        A = np.array([[1., self.dt], [0., 1-self.dt/self.tau]])
+        B = np.array([0., self.dt])
 
-        A = np.array([[1., dt], [0., 1-dt/tau]])
-        B = np.array([0., dt])
 
         if (t_T is None):
             t_Tv = (0.02468 + 0.001739*np.abs(xT[0]-x0[0]))/(1-0.001739*np.abs(v))
@@ -173,15 +232,82 @@ class MinimumVarianceControl:
             t_R =  float(round(Decimal(0.15-t_T),3)) # .05 # fixing / pursuit duration
 
 
-        T = int(t_T/dt)
-        R = int(t_R/dt)
-        time = np.linspace(0, t_T+t_R, R+T+1)
+        T = int(self.t_T/self.dt)
+        R = int(self.t_R/self.dt)
+        time = np.linspace(0, self.t_T+self.t_R, R+T+1)
         time_ms = time*1000
         mult = 0.01
+            
+
+        def vexpectation(u):
+            """
+            vectorized version of expectation
+            """
+            exp = np.zeros((T+R+1, 2))
+            for i in np.arange(T+R+1):
+                exp[i, :] = expectation(u,i)
+            return exp
 
 
+        def variance(u, t):
+            """
+            compute the variance at time t given the control signal u
+            """
+            return k*(np.flipud(ci0_array[0:t]**2)*u[0:t]**2).sum()
 
 
+        def vvariance(u):
+            """
+            vectorized version of variance
+            """
+            var = np.zeros(T+R+1)
+            for i in np.arange(T+R+1):
+                var[i] = variance(u,i)
+            return var
+
+
+        def bias(u, t):
+            """
+            compute the bias at time t given the control signal u
+            """
+            return (((expectation(u, t)-(xT+np.array([v*t*dt,v])))**2)*np.array([1,mult])).sum()
+
+
+        def cost(u):
+            """
+            compute the post-movement cost given the control signal u
+            """
+            def var1d(t):
+                return(variance(u,t))
+            var_vec = np.vectorize(var1d)
+            def bias1d(t):
+                return((bias(u,t)**2).sum())
+            bias_vec = np.vectorize(bias1d)
+
+            return var_vec(T+1+np.arange(R)).sum() + bias_vec(T+np.arange(R+1)).sum()
+
+
+        def cost_deriv(u, i):
+            """
+            Derivative of the cost function with respect to u_i
+            """
+            if i < T:
+                return (2*np.transpose(ci_array[:,(T-i-1):(T+R-i)])*np.array([((expectation(u,t)-xT-np.array([v*t*dt,v]))*np.array([1,mult])).tolist() for t in (T+np.arange(R+1))])).sum() + 2*k*u[i]*(ci0_array[(T+1-i-1):(T+R-i)]**2).sum()
+            else:
+                return (2*np.transpose(ci_array[:,0:(T+R-i)])*np.array([((expectation(u,t)-xT-np.array([v*t*dt,v]))*np.array([1,mult])).tolist() for t in (i+1+np.arange(R+T-i))])).sum() + 2*k*u[i]*(ci0_array[0:(T+R-i)]**2).sum()
+
+
+        def vcost_deriv(u):
+            """
+            vectorized version of cost_deriv
+            """
+            deriv_cost = np.zeros(T+R+1)
+            for i in np.arange(T+R+1-1):
+                deriv_cost[i] = cost_deriv(u,i)
+            return deriv_cost
+
+        
+if True:        
         def SymmetricalBangbang(tau, x0, xT, dt, t_T, t_R, v0):
             """
             Returns the symmetrical (U+ = - U-) bangbang solution
@@ -350,125 +476,13 @@ class MinimumVarianceControl:
             return u[ind_best, :], position[ind_best, :], velocity[ind_best, :], variancev[ind_best, :]*dt/dt2
 
 
-        def power(A, n): 
-            """
-            renvoie A puissance n où A est une matrice carrée
-
-            """
-            if n == 0:
-                return(np.eye(int(np.sqrt(np.size(A)))))
-            elif n == 1:
-                return A
-            else:
-                if n % 2 == 0:
-                    A_half = power(A, n//2)
-                    return(A_half.dot(A_half))
-                else:
-                    A_half = power(A, (n-1)//2)
-                    return(A.dot(A_half.dot(A_half)))
-
-
-        def A_pow(A):
-            """
-            compute the array of A^i of shape (T+R+1, 2, 2)
-            """
-            A_pow_array = np.zeros((T+R+1, 2, 2))
-
-            for i in np.arange(T+R+1):
-                #A_pow_array[i, :, :] = power(A, i)
-                A_pow_array[i] = power(A, i)
-            return A_pow_array
-
-        A_pow_array = A_pow(A)
-
-        ci0_array = np.zeros(T+R+1)
-        ci1_array = np.zeros(T+R+1)
-
-        for i in np.arange(T+R+1):
-            ci0_array[i] = (A_pow_array[i, :, :].dot(B))[0]
-            ci1_array[i] = (A_pow_array[i, :, :].dot(B))[1]
-
-        ci_array = np.array([ci0_array,ci1_array])
-
-
-        def pow_fast(n):
-            #return A_pow_array[n,:,:]
-            return A_pow_array[n]
-
-        def expectation(u, t):
-            """
-            compute the expectation at time t given the control signal u
-            array of shape (2, 1)
-            """
-            if t == 0:
-                return x0
-            else:
-                return pow_fast(t).dot(x0)+(ci_array[:,0:t]*np.flipud(u[0:t])).sum(axis = 1)
-
-
-        def vexpectation(u):
-            """
-            vectorized version of expectation
-            """
-            exp = np.zeros((T+R+1, 2))
-            for i in np.arange(T+R+1):
-                exp[i, :] = expectation(u,i)
-            return exp
-
-
-        def variance(u, t):
-            """
-            compute the variance at time t given the control signal u
-            """
-            return k*(np.flipud(ci0_array[0:t]**2)*u[0:t]**2).sum()
-
-
-        def vvariance(u):
-            """
-            vectorized version of variance
-            """
-            var = np.zeros(T+R+1)
-            for i in np.arange(T+R+1):
-                var[i] = variance(u,i)
-            return var
-
-
-        def bias(u, t):
-            """
-            compute the bias at time t given the control signal u
-            """
-            return (((expectation(u, t)-(xT+np.array([v*t*dt,v])))**2)*np.array([1,mult])).sum()
-
-
-        def cost(u):
-            """
-            compute the post-movement cost given the control signal u
-            """
-            def var1d(t):
-                return(variance(u,t))
-            var_vec = np.vectorize(var1d)
-            def bias1d(t):
-                return((bias(u,t)**2).sum())
-            bias_vec = np.vectorize(bias1d)
-
-            return var_vec(T+1+np.arange(R)).sum() + bias_vec(T+np.arange(R+1)).sum()
-
-
-        def cost_deriv(u, i):
-            """
-            Derivative of the cost function with respect to u_i
-            """
-            if i < T:
-                return (2*np.transpose(ci_array[:,(T-i-1):(T+R-i)])*np.array([((expectation(u,t)-xT-np.array([v*t*dt,v]))*np.array([1,mult])).tolist() for t in (T+np.arange(R+1))])).sum() + 2*k*u[i]*(ci0_array[(T+1-i-1):(T+R-i)]**2).sum()
-            else:
-                return (2*np.transpose(ci_array[:,0:(T+R-i)])*np.array([((expectation(u,t)-xT-np.array([v*t*dt,v]))*np.array([1,mult])).tolist() for t in (i+1+np.arange(R+T-i))])).sum() + 2*k*u[i]*(ci0_array[0:(T+R-i)]**2).sum()
-
-
-        def vcost_deriv(u):
-            """
-            vectorized version of cost_deriv
-            """
-            deriv_cost = np.zeros(T+R+1)
-            for i in np.arange(T+R+1-1):
-                deriv_cost[i] = cost_deriv(u,i)
-            return deriv_cost
+class BangBang:
+    def __init__():
+    
+    def command():
+        return u
+    def theory():
+        return x, v
+    def linearpred(u):
+        x = expectation (u)
+    
