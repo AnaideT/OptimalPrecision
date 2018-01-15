@@ -475,14 +475,4 @@ if True:
 
             return u[ind_best, :], position[ind_best, :], velocity[ind_best, :], variancev[ind_best, :]*dt/dt2
 
-
-class BangBang:
-    def __init__():
-    
-    def command():
-        return u
-    def theory():
-        return x, v
-    def linearpred(u):
-        x = expectation (u)
     
