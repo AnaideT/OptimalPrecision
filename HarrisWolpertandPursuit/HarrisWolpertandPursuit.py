@@ -294,32 +294,31 @@ class MinimumVarianceControl:
         A_pow_array = A_pow(self.array_A(), self.T(), self.R())
         #return A_pow_array[n,:,:]
         return A_pow_array[n] 
-        #return A_pow(A, B, T, R)[n]
 
 
-    def ci0_array(self):
+    def ci0_array(self, t):
         ci0 = np.zeros(self.T()+self.R()+1)
         #A_pow_array = A_pow(self.array_A, self.T(), self.R())
         for i in np.arange(self.T()+self.R()+1):
             #ci0[i] = (A_pow[i, :, :].dot(B))[0]
-            ci0[i] = (self.pow_fast(i).dot(self.array_B()))[0] # dot product of the 2 matrices A and B
+            ci0[i] = (self.pow_fast(t).dot(self.array_B()))[0] # dot product of the 2 matrices A and B
         return ci0
 
 
-    def ci1_array(self):
+    def ci1_array(self, t):
         ci1 = np.zeros(self.T()+self.R()+1)
         for i in np.arange(self.T()+self.R()+1):
             #ci1_array[i] = (A_pow[i, :, :].dot(B))[1]
-            ci1[i] = (self.pow_fast(i).dot(self.array_B()))[1]
+            ci1[i] = (self.pow_fast(t).dot(self.array_B()))[1]
         return ci1
 
 
-    def ci_array(self):
-        ci_array = np.array([self.ci0_array(), self.ci1_array()])
+    def ci_array(self, t):
+        ci_array = np.array([self.ci0_array(t), self.ci1_array(t)])
         return ci_array
 
 
-    def expectation(self, u, t):
+    def expectation(self, ci_array, u, t):
         """"""
         #Computation of the expectation of the state vector at time t, given u
         """"""
@@ -327,7 +326,8 @@ class MinimumVarianceControl:
             return self.x0
         else:
             #return pow_fast(t).dot(x0)+(ci_array[:,0:t]*np.flipud(u[0:t])).sum(axis = 1)
-            return (self.pow_fast(t).dot(self.x0)+(self.ci_array()[:,0:t]*np.flipud(u[0:t])).sum(axis = 1))  
+            #return (self.pow_fast(t).dot(self.x0)+(self.ci_array()[:,0:t]*np.flipud(u[0:t])).sum(axis = 1))
+            return (self.pow_fast(t).dot(self.x0)+(ci_array[:,0:t]*np.flipud(u[0:t])).sum(axis = 1))  
 
 
     def variance(self, u, t):
@@ -336,11 +336,11 @@ class MinimumVarianceControl:
         return self.k*(np.flipud(self.ci0_array()[0:t]**2)*u[0:t]**2).sum()
 
 
-    def position(self):
+    def position(self, expectation):
         position = np.zeros((self.n_rho-1, self.T()+self.R()+1))
         for i in np.arange(self.n_rho-1):
             for j in np.arange(self.T()+self.R()+1):
-                position[i, j] = self.expectation(self.U()[i,:], j)[0]
+                position[i, j] = expectation[0]
         return position
     
     
